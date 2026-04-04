@@ -1,0 +1,145 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/FrameXML/UI.xsd">
+	<Script>
+	___XLIB_TIMESTAMP_START = debugprofilestop()
+	</Script>
+
+	<!-- Compatibility layers - MUST load before libraries -->
+	<Script file="Compat-Lua.lua"/>
+	<Script file="Compat-335.lua"/>
+
+	<!-- LibStub - Library version negotiation -->
+	<Script file="LibStub\LibStub.lua"/>
+
+	<!-- CallbackHandler - Event callback management -->
+	<Include file="CallbackHandler-1.0\CallbackHandler-1.0.xml"/>
+
+	<!-- Ace Libraries (Retail Latest from WoWUIDev/Ace3) -->
+	<Include file="AceAddon-3.0\AceAddon-3.0.xml"/>
+	<Include file="AceEvent-3.0\AceEvent-3.0.xml"/>
+	<Include file="AceTimer-3.0\AceTimer-3.0.xml"/>
+	<Include file="AceHook-3.0\AceHook-3.0.xml"/>
+	<Include file="AceDB-3.0\AceDB-3.0.xml"/>
+	<Include file="AceDBOptions-3.0\AceDBOptions-3.0.xml"/>
+	<Include file="AceConsole-3.0\AceConsole-3.0.xml"/>
+	<Include file="AceSerializer-3.0\AceSerializer-3.0.xml"/>
+	<Include file="AceBucket-3.0\AceBucket-3.0.xml"/>
+	<Include file="AceLocale-3.0\AceLocale-3.0.xml"/>
+	<Include file="AceTab-3.0\AceTab-3.0.xml"/>
+
+	<!-- Media libraries - MUST load BEFORE widgets that depend on LSM -->
+	<Include file="LibSharedMedia-3.0\lib.xml"/>
+	<Include file="LibDataBroker-1.1\LibDataBroker-1.1.xml"/>
+	<Include file="LibDBIcon-1.0\lib.xml"/>
+
+	<!-- AceGUI-3.0 with widgets -->
+	<Include file="AceGUI-3.0\AceGUI-3.0.xml"/>
+	<Include file="AceGUI-3.0-SharedMediaWidgets\widget.xml"/>
+
+	<!-- AceConfig-3.0 with sub-modules (AceConfig-3.0.xml loads all sub-modules) -->
+	<Include file="AceConfig-3.0\AceConfig-3.0.xml"/>
+	<Script file="LibWindow-1.1\LibWindow-1.1.lua"/>
+	<Include file="LibCandyBar-3.0\lib.xml"/>
+	<Include file="LibQTip-1.0\lib.xml"/>
+
+	<!-- AceComm with ChatThrottleLib -->
+	<Script file="AceComm-3.0\ChatThrottleLib.lua"/>
+	<Script file="AceComm-3.0\AceComm-3.0.lua"/>
+
+	<!-- HereBeDragons - Map coordinates library -->
+	<Script file="HereBeDragons\HereBeDragons-2.0.lua"/>
+	<Script file="HereBeDragons\HereBeDragons-Pins-2.0.lua"/>
+	<Script file="HereBeDragons\HereBeDragons-Migrate.lua"/>
+
+	<!-- Astrolabe - Map library -->
+	<Script file="Astrolabe\Astrolabe.lua"/>
+
+	<!-- LibBabble locale libraries -->
+	<Include file="LibBabble-3.0\lib.xml"/>
+	<Include file="LibBabble-SubZone-3.0\lib.xml"/>
+	<Include file="LibBabble-Faction-3.0\lib.xml"/>
+	<Include file="LibBabble-CreatureType-3.0\lib.xml"/>
+	<Include file="LibBabble-Zone-3.0\lib.xml"/>
+	<Include file="LibBabble-Boss-3.0\lib.xml"/>
+	<Include file="LibBabble-Inventory-3.0\lib.xml"/>
+
+	<!-- Navigation -->
+	<Include file="LibTaxi-1.0\lib.xml"/>
+	<Include file="LibRover-1.0\lib.xml"/>
+	<Include file="LibTourist-3.0\lib.xml"/>
+
+	<!-- Utility libraries -->
+	<Script file="LibGratuity-3.0\LibGratuity-3.0.lua"/>
+	<Script file="LibDeflate\LibDeflate.lua"/>
+	<Script file="LibHash-1.0\LibHash-1.0.lua"/>
+	<Script file="LibGraph-2.0\LibGraph-2.0.lua"/>
+	<Script file="LibBetterBlizzOptions-1.0\LibBetterBlizzOptions-1.0.lua"/>
+	<Script file="LibDualSpec-1.0\LibDualSpec-1.0.lua"/>
+	<Script file="LibTextTable-1.0\LibTextTable-1.0.lua"/>
+	<Script file="LibCamera-1.0\LibCamera-1.0.lua"/>
+	<Script file="LibTutorial-1.0\LibTutorial-1.0.lua"/>
+
+	<!-- Compression & Encoding -->
+	<Include file="LibCompress\lib.xml"/>
+	<Include file="LibSerialize\lib.xml"/>
+	<Include file="LibCustomGlow-1.0\LibCustomGlow-1.0.xml"/>
+	<Script file="LibGetFrame-1.0\LibGetFrame-1.0.lua"/>
+	<Script file="LibRangeCheck-2.0\LibRangeCheck-2.0.lua"/>
+	<Include file="LibSpellRange-1.0\lib.xml"/>
+	<Include file="LibGroupTalents-1.0\lib.xml"/>
+
+	<!-- Other libraries -->
+	<Include file="LibBossIDs-1.0\lib.xml"/>
+	<Include file="LibTranslit\LibTranslit-1.0.xml"/>
+	<Include file="LibDFramework-1.0\load.xml"/>
+	<Include file="NickTag-1.0\NickTag-1.0.xml"/>
+	<Include file="UTF8\UTF8.xml"/>
+	<Include file="LibCompat-1.0\lib.xml"/>
+	<Script file="LibS2kFactionalItems-1.0\LibS2kFactionalItems-1.0.lua"/>
+	<Script file="LibS2kMisc-1.0\LibS2kMisc-1.0.lua"/>
+
+	<!-- World Map Buttons -->
+	<Include file="Krowi_WorldMapButtons\Krowi_WorldMapButtons-1.4.xml"/>
+
+	<!-- Helper Libraries -->
+	<Script file="XXH_Lua_Lib\XXH_Lua_Lib.lua"/>
+	<Script file="EasyFork.lua"/>
+
+	<!-- ElvUI Libraries -->
+	<Script file="LibActionButton-1.0\LibActionButton-1.0.lua"/>
+	<Script file="LibAnim\LibAnim.lua"/>
+	<Include file="LibAuraInfo-1.0\lib.xml"/>
+	<Script file="LibBase64-1.0\LibBase64-1.0.lua"/>
+	<Script file="LibChatAnims\LibChatAnims.lua"/>
+	<Script file="LibElvUIPlugin-1.0\LibElvUIPlugin-1.0.lua"/>
+	<Include file="LibItemSearch-1.2\LibItemSearch-1.2.xml"/>
+	<Script file="LibSimpleSticky\LibSimpleSticky.lua"/>
+	<Include file="oUF\oUF.xml"/>
+	<Include file="oUF_Plugins\oUF_Plugins.xml"/>
+
+	<!-- ElvUI Shared Libraries -->
+	<Script file="LibAceConfigHelper\LibAceConfigHelper.lua"/>
+	<Script file="LibDispel\LibDispel.lua"/>
+	<Include file="TaintLess\TaintLess.xml"/>
+
+	<!-- LibSink -->
+	<Include file="LibSink-2.0\lib.xml"/>
+
+	<!-- Archivist -->
+	<Script file="Archivist\Archivist.lua"/>
+
+	<!-- UIDropDownFork -->
+	<Include file="UIDropDownFork\UIDropDownFork.xml"/>
+
+	<!-- ArkDewdrop -->
+	<Script file="ArkDewdrop\ArkDewdrop-3.0.lua"/>
+
+	<!-- DewdropLib -->
+	<Include file="DewdropLib\embeds.xml"/>
+
+	<Script>
+	___XLIB_TIMESTAMP_END = debugprofilestop()
+	print("X-Libs: All libraries loaded in "..string.format("%.3f",___XLIB_TIMESTAMP_END - ___XLIB_TIMESTAMP_START).."ms")
+	___XLIB_TIMESTAMP_START = nil
+	___XLIB_TIMESTAMP_END = nil
+	</Script>
+</Ui>

@@ -1,0 +1,13 @@
+## Interface: 110005, 110002, 110000, 40400, 30403, 30300, 11504
+## Title: X-Libs
+## Notes: Universal shared libraries for all addons - works on Vanilla, TBC, WotLK, Cata, MoP, and Retail
+## Author: X-Plore
+## Version: 1.5
+## LoadOnDemand: 0
+
+# Compatibility layer - MUST load first
+# Compat-Lua.lua
+Compat-335.lua
+
+# Library manifest (loads all libraries in correct order)
+Libs.xml
