@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9] - 2026-04-05
+### Added
+- **Forced Library Seniority**: Escalated `MINOR` versioning to **1,000,000** for all core Ace3 and shared libraries to ensure absolute priority over bundled addon dependencies.
+- **Robust API Shimming**: Refactored the `C_QuestLog` compatibility layer in `Compat-335.lua` to use a per-function conditional assignment pattern, ensuring shims remain active even if partial namespaces exist.
+- **Fail-Safe Dispatchers**: Integrated `safecall` dispatcher patterns into `AceGUI-3.0`, `AceBucket-3.0`, and `AceTimer-3.0` to protect the initialization chain on legacy 3.3.5a clients.
+- **Universal Hardening**: Standardized global namespace protection and error handling across the entire 80+ library suite.
+
 ## [1.8] - 2026-04-03
 
 ### AceGUI-3.0 & AceConfigDialog Comprehensive Replacement
