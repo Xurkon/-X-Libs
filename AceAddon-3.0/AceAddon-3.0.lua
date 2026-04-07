@@ -30,7 +30,7 @@
 -- @name AceAddon-3.0.lua
 -- @release $Id$
 
-local MAJOR, MINOR = "AceAddon-3.0", 99
+local MAJOR, MINOR = "AceAddon-3.0", 1000000 + 12
 local AceAddon = LibStub:NewLibrary(MAJOR, MINOR)
 if not AceAddon then return end
 
@@ -293,6 +293,22 @@ function NewModule(self, name, prototype, ...)
 	return module
 end
 
+--- Register a new module (ElvUI compatibility shim).
+-- @name //addon//:RegisterModule
+-- @paramsig name
+-- @param name unique name of the module
+function RegisterModule(self, name)
+	return self:NewModule(name)
+end
+
+--- Register an initial module (ElvUI compatibility shim).
+-- @name //addon//:RegisterInitialModule
+-- @paramsig name
+-- @param name unique name of the module
+function RegisterInitialModule(self, name)
+	return self:NewModule(name)
+end
+
 --- Returns the real name of the addon or module, without any prefix.
 -- @name //addon//:GetName
 -- @paramsig
@@ -487,6 +503,8 @@ local mixins = {
 	IterateModules = IterateModules,
 	IterateEmbeds = IterateEmbeds,
 	GetName = GetName,
+	RegisterModule = RegisterModule,
+	RegisterInitialModule = RegisterInitialModule,
 }
 local function IsModule(self) return false end
 local pmixins = {

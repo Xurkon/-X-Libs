@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibElvUIPlugin-1.0", 99
+local MAJOR, MINOR = "LibElvUIPlugin-1.0", 1000031
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 -- GLOBALS: ElvUI
@@ -93,35 +93,16 @@ elseif locale == "zhTW" then
 	LIBRARY = "庫"
 end
 
-local E, ElvUI
+local E
 local function checkElvUI()
 	if not E then
-		ElvUI = _G.ElvUI
-		if ElvUI and ElvUI[1] then
-			E = ElvUI[1]
-			-- Protect against early access crashes (db, global, private nil errors)
-			-- Return self for any nested indexing to prevent further nil errors (e.g., E.db.something.else)
-			local mt = { __index = function(t, k) return t end }
-			local dummy = setmetatable({}, mt)
-			
-			if E then
-				E.db = E.db or dummy
-				E.global = E.global or dummy
-				E.private = E.private or dummy
-				E.Options = E.Options or dummy
-				E.Toolkit = E.Toolkit or dummy
-			end
-			
-			-- Support early unpack(ElvUI) where index 3=Private, 5=Global
-			if not ElvUI[3] then ElvUI[3] = dummy end
-			if not ElvUI[5] then ElvUI[5] = dummy end
-		end
+		E = _G.ElvUI and _G.ElvUI[1]
 	end
 	return E
 end
 
 function lib:RegisterPlugin(name, callback, isLib, libVersion)
-	checkElvUI()
+	if not checkElvUI() then return end
 
 	local plugin = {
 		name = name,
@@ -137,36 +118,25 @@ function lib:RegisterPlugin(name, callback, isLib, libVersion)
 
 	lib.plugins[name] = plugin
 
-	local function RegisterVersionCheck()
-		local E_internal = checkElvUI()
-		if not lib.registeredPrefix and E_internal and E_internal.global and E_internal.global.general and E_internal.global.general.versionCheck then
-			lib.VCFrame:RegisterEvent("CHAT_MSG_ADDON")
-			lib.VCFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-			lib.VCFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
-			lib.VCFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-			lib.registeredPrefix = true
-		end
+	if not lib.registeredPrefix and E.global.general.versionCheck then
+		lib.VCFrame:RegisterEvent("CHAT_MSG_ADDON")
+		lib.VCFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+		lib.VCFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+		lib.VCFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+		lib.registeredPrefix = true
 	end
-
-	RegisterVersionCheck()
 
 	local loaded = IsAddOnLoaded("ElvUI_OptionsUI")
 	if not loaded then
 		lib.CFFrame:RegisterEvent("ADDON_LOADED")
 	elseif loaded then
-		local E_internal = checkElvUI()
-		if name ~= MAJOR and E_internal and E_internal.Options and E_internal.Options.args and E_internal.Options.args.plugins then
-			E_internal.Options.args.plugins.args.plugins.name = lib:GeneratePluginList()
+		if name ~= MAJOR then
+			E.Options.args.plugins.args.plugins.name = lib:GeneratePluginList()
 		end
 
 		if callback then
 			callback()
 		end
-	end
-
-	-- If registration failed (likely too early), ensure it runs later during ElvUI initialization
-	if not lib.registeredPrefix then
-		lib:HookInitialize(nil, RegisterVersionCheck)
 	end
 
 	return plugin
@@ -177,6 +147,7 @@ local function SendVersionCheckMessage()
 end
 
 function lib:DelayedSendVersionCheck(delay)
+	if not checkElvUI() then return end
 	if not E.SendPluginVersionCheck then
 		E.SendPluginVersionCheck = SendVersionCheckMessage
 	end
@@ -188,6 +159,7 @@ end
 
 function lib:OptionsUILoaded(_, addon)
 	if addon == "ElvUI_OptionsUI" then
+		if not checkElvUI() then return end
 		lib:GetPluginOptions()
 
 		for _, plugin in pairs(lib.plugins) do
@@ -211,6 +183,7 @@ function lib:GenerateVersionCheckMessage()
 end
 
 function lib:GetPluginOptions()
+	if not checkElvUI() then return end
 	E.Options.args.plugins = {
 		order = -10,
 		type = "group",
@@ -241,6 +214,7 @@ end
 
 function lib:VersionCheck(event, prefix, message, _, sender)
 	if (event == "CHAT_MSG_ADDON" and prefix == lib.prefix) and (sender and message and not match(message, "^%s-$")) then
+		if not checkElvUI() then return end
 		if sender == E.myname then return end
 
 		if not E.pluginRecievedOutOfDateMessage then
@@ -276,6 +250,7 @@ function lib:GeneratePluginList()
 	local list = ""
 	for _, plugin in pairs(lib.plugins) do
 		if plugin.name ~= MAJOR then
+			if not checkElvUI() then return list end
 			local author = GetAddOnMetadata(plugin.name, "Author")
 			local title = GetAddOnMetadata(plugin.name, "Title") or plugin.name
 			local color = (plugin.old and E:RGBToHex(1, 0, 0)) or E:RGBToHex(0, 1, 0)
@@ -315,6 +290,7 @@ function lib:SendPluginVersionCheck(message)
 	local maxChar, msgLength = 254 - len(lib.prefix), len(message)
 	if msgLength > maxChar then
 		local delay, splitMessage = 0
+		if not checkElvUI() then return end
 
 		for _ = 1, ceil(msgLength / maxChar) do
 			splitMessage = match(sub(message, 1, maxChar), ".+;")
@@ -343,12 +319,7 @@ function lib.Initialized()
 end
 
 function lib:HookInitialize(tbl, func)
-	if type(tbl) == "function" and not func then
-		func = tbl
-		tbl = nil
-	end
-
-	if not func then return end
+	if not (tbl and func) then return end
 
 	if type(func) == "string" then
 		func = tbl and tbl[func]

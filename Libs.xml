@@ -106,6 +106,7 @@
 
 	<!-- ElvUI Libraries -->
 	<Script file="LibActionButton-1.0\LibActionButton-1.0.lua"/>
+	<Script file="LibActionButton-1.0\LibActionButton-1.0-ElvUI.lua"/>
 	<Script file="LibAnim\LibAnim.lua"/>
 	<Include file="LibAuraInfo-1.0\lib.xml"/>
 	<Script file="LibBase64-1.0\LibBase64-1.0.lua"/>

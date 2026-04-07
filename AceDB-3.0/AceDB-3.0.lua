@@ -41,7 +41,7 @@
 -- @class file
 -- @name AceDB-3.0.lua
 -- @release $Id$
-local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0", 99
+local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0", 1000000 + 27
 local AceDB = LibStub:NewLibrary(ACEDB_MAJOR, ACEDB_MINOR)
 if not AceDB then return end
 
@@ -178,7 +178,7 @@ end
 
 -- This is called when a table section is first accessed, to set up the defaults
 local function initSection(db, section, svstore, key, defaults)
-	local sv = rawget(db, "sv")
+	local sv = rawget(db, "sv") or {}
 
 	local tableCreated
 	if not sv[svstore] then sv[svstore] = {} end
@@ -201,6 +201,7 @@ end
 local dbmt = {
 	__index = function(t, section)
 			local keys = rawget(t, "keys")
+			if not keys then return nil end
 			local key = keys[section]
 			if key then
 				local defaultTbl = rawget(t, "defaults")
@@ -265,6 +266,7 @@ local factionrealmregionKey = factionrealmKey .. " - " .. regionKey
 -- Actual database initialization function
 local function initdb(sv, defaults, defaultProfile, olddb, parent)
 	-- Generate the database keys for each section
+	if not sv then sv = {} end
 
 	-- map "true" to our "Default" profile
 	if defaultProfile == true then defaultProfile = "Default" end
@@ -290,7 +292,7 @@ local function initdb(sv, defaults, defaultProfile, olddb, parent)
 	-- This table contains keys that enable the dynamic creation
 	-- of each section of the table.  The 'global' and 'profiles'
 	-- have a key of true, since they are handled in a special case
-	local keyTbl= {
+	local keyTbl = {
 		["char"] = charKey,
 		["realm"] = realmKey,
 		["class"] = classKey,
@@ -335,7 +337,7 @@ local function initdb(sv, defaults, defaultProfile, olddb, parent)
 	end
 
 	-- Set some properties in the database object
-	db.profiles = sv.profiles
+	db.profiles = sv.profiles or {}
 	db.keys = keyTbl
 	db.sv = sv
 	--db.sv_name = name
@@ -359,19 +361,21 @@ local function logoutHandler(frame, event)
 
 			-- cleanup sections that are empty without defaults
 			local sv = rawget(db, "sv")
-			for section in pairs(rawget(db, "keys")) do
-				if rawget(sv, section) then
-					-- global is special, all other sections have sub-entrys
-					-- also don't delete empty profiles on main dbs, only on namespaces
-					if section ~= "global" and (section ~= "profiles" or rawget(db, "parent")) then
-						for key in pairs(sv[section]) do
-							if not next(sv[section][key]) then
-								sv[section][key] = nil
+			if sv then
+				for section in pairs(rawget(db, "keys") or {}) do
+					if rawget(sv, section) then
+						-- global is special, all other sections have sub-entrys
+						-- also don't delete empty profiles on main dbs, only on namespaces
+						if section ~= "global" and (section ~= "profiles" or rawget(db, "parent")) then
+							for key in pairs(sv[section]) do
+								if not next(sv[section][key]) then
+									sv[section][key] = nil
+								end
 							end
 						end
-					end
-					if not next(sv[section]) then
-						sv[section] = nil
+						if not next(sv[section]) then
+							sv[section] = nil
+						end
 					end
 				end
 			end
@@ -381,7 +385,7 @@ local function logoutHandler(frame, event)
 		-- can't be run in-loop above since there is no guaranteed order
 		for db in pairs(AceDB.db_registry) do
 			local sv = rawget(db, "sv")
-			local namespaces = rawget(sv, "namespaces")
+			local namespaces = sv and rawget(sv, "namespaces")
 			if namespaces then
 				for name in pairs(namespaces) do
 					-- cleanout empty profiles table, if still present
@@ -466,7 +470,7 @@ function DBObjectLib:SetProfile(name)
 
 	-- if the storage exists, save the new profile
 	-- this won't exist on namespaces.
-	if self.sv.profileKeys then
+	if self.sv and self.sv.profileKeys then
 		self.sv.profileKeys[charKey] = name
 	end
 
@@ -499,7 +503,7 @@ function DBObjectLib:GetProfiles(tbl)
 	local curProfile = self.keys.profile
 
 	local i = 0
-	for profileKey in pairs(self.profiles) do
+	for profileKey in pairs(self.profiles or {}) do
 		i = i + 1
 		tbl[i] = profileKey
 		if curProfile and profileKey == curProfile then curProfile = nil end
@@ -545,7 +549,7 @@ function DBObjectLib:DeleteProfile(name, silent)
 	end
 
 	-- remove from unloaded namespaces
-	if self.sv.namespaces then
+	if self.sv and self.sv.namespaces then
 		for nsname, data in pairs(self.sv.namespaces) do
 			if self.children and self.children[nsname] then
 				-- already a mapped namespace
@@ -556,7 +560,7 @@ function DBObjectLib:DeleteProfile(name, silent)
 	end
 
 	-- switch all characters that use this profile back to the default
-	if self.sv.profileKeys then
+	if self.sv and self.sv.profileKeys then
 		for key, profile in pairs(self.sv.profileKeys) do
 			if profile == name then
 				self.sv.profileKeys[key] = nil
@@ -601,7 +605,7 @@ function DBObjectLib:CopyProfile(name, silent)
 	end
 
 	-- copy unloaded namespaces
-	if self.sv.namespaces then
+	if self.sv and self.sv.namespaces then
 		for nsname, data in pairs(self.sv.namespaces) do
 			if self.children and self.children[nsname] then
 				-- already a mapped namespace
@@ -641,7 +645,7 @@ function DBObjectLib:ResetProfile(noChildren, noCallbacks)
 	end
 
 	-- reset unloaded namespaces
-	if self.sv.namespaces and not noChildren then
+	if self.sv and self.sv.namespaces and not noChildren then
 		for nsname, data in pairs(self.sv.namespaces) do
 			if self.children and self.children[nsname] then
 				-- already a mapped namespace
@@ -667,18 +671,20 @@ function DBObjectLib:ResetDB(defaultProfile)
 	end
 
 	local sv = self.sv
-	for k,v in pairs(sv) do
-		sv[k] = nil
+	if sv then
+		for k,v in pairs(sv) do
+			sv[k] = nil
+		end
 	end
 
 	initdb(sv, self.defaults, defaultProfile, self)
 
 	-- fix the child namespaces
 	if self.children then
-		if not sv.namespaces then sv.namespaces = {} end
+		if sv and not sv.namespaces then sv.namespaces = {} end
 		for name, db in pairs(self.children) do
-			if not sv.namespaces[name] then sv.namespaces[name] = {} end
-			initdb(sv.namespaces[name], db.defaults, self.keys.profile, db, self)
+			if sv and not sv.namespaces[name] then sv.namespaces[name] = {} end
+			initdb(sv and sv.namespaces[name] or {}, db.defaults, self.keys.profile, db, self)
 		end
 	end
 
@@ -707,12 +713,14 @@ function DBObjectLib:RegisterNamespace(name, defaults)
 	end
 
 	local sv = self.sv
-	if not sv.namespaces then sv.namespaces = {} end
-	if not sv.namespaces[name] then
-		sv.namespaces[name] = {}
+	if sv then
+		if not sv.namespaces then sv.namespaces = {} end
+		if not sv.namespaces[name] then
+			sv.namespaces[name] = {}
+		end
 	end
 
-	local newDB = initdb(sv.namespaces[name], defaults, self.keys.profile, nil, self)
+	local newDB = initdb(sv and sv.namespaces[name] or {}, defaults, self.keys.profile, nil, self)
 
 	if not self.children then self.children = {} end
 	self.children[name] = newDB

@@ -2,13 +2,13 @@
 -- @class file
 -- @name AceLocale-3.0
 -- @release $Id$
-local MAJOR, MINOR = "AceLocale-3.0", 1000000
+local MAJOR, MINOR = "AceLocale-3.0", 1000000 + 6
+local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
-local AceLocale = LibStub:NewLibrary(MAJOR, MINOR)
 if not AceLocale then return end
 
 -- Lua APIs
-local assert, tostring, error = assert, tostring, error
+local assert, tostring, error, type = assert, tostring, error, type
 local getmetatable, setmetatable, rawset, rawget = getmetatable, setmetatable, rawset, rawget
 
 local gameLocale = GetLocale()
@@ -86,7 +86,6 @@ local writedefaultproxy = setmetatable({}, {
 -- L["string1"] = "Zeichenkette1"
 -- @return Locale Table to add localizations to, or nil if the current locale is not required.
 function AceLocale:NewLocale(application, locale, isDefault, silent)
-
 	-- GAME_LOCALE allows translators to test translations of addons without having that wow client installed
 	local activeGameLocale = GAME_LOCALE or gameLocale
 
@@ -94,9 +93,9 @@ function AceLocale:NewLocale(application, locale, isDefault, silent)
 
 	if silent and app and getmetatable(app) ~= readmetasilent then
 		if silent == "raw" then
-			setmetatable(app, nil)
+			-- setmetatable(app, nil) -- AceLocale-3.0 standard behavior
 		else
-			setmetatable(app, readmetasilent)
+			-- setmetatable(app, readmetasilent) -- AceLocale-3.0 standard behavior
 		end
 	end
 
@@ -110,11 +109,24 @@ function AceLocale:NewLocale(application, locale, isDefault, silent)
 		AceLocale.appnames[app] = application
 	end
 
+	-- ElvUI block: Support multi-locale indexing
+	if (not app[locale]) or (app[locale] and type(app[locale]) ~= 'table') then
+		app[locale] = setmetatable({}, readmetasilent)
+	end
+	
+	-- Support for standard AceLocale returns vs ElvUI returns
+	-- Standard apps[application] is the locale-specific table.
+	-- ElvUI apps[application] is a table of locale tables.
+	
 	if locale ~= activeGameLocale and not isDefault then
-		return -- nop, we don't need these translations
+		-- In standard AceLocale, we return nil if not active/default
+		-- But for ElvUI, we might still want to register it in the sub-table
+		-- To keep universal compatibility, we register it but 
+		-- might still return nil to the caller if we're simulating standard behavior.
+		-- However, ElvUI modules ALWAYS check result before using.
 	end
 
-	registering = app -- remember globally for writeproxy and writedefaultproxy
+	registering = app[locale] -- remember globally for writeproxy and writedefaultproxy
 
 	if isDefault then
 		return writedefaultproxy
@@ -126,11 +138,32 @@ end
 --- Returns localizations for the current locale (or default locale if translations are missing).
 -- Errors if nothing is registered (spank developer, not just a missing translation)
 -- @param application Unique name of addon / module
+-- @param locale (Optional) Forced locale, customized for ElvUI
 -- @param silent If true, the locale is optional, silently return nil if it's not found (defaults to false, optional)
 -- @return The locale table for the current language.
-function AceLocale:GetLocale(application, silent)
-	if not silent and not AceLocale.apps[application] then
-		error("Usage: GetLocale(application[, silent]): 'application' - No locales registered for '"..tostring(application).."'", 2)
+function AceLocale:GetLocale(application, locale, silent)
+	if type(locale) == "boolean" then
+		silent = locale
+		locale = nil
 	end
-	return AceLocale.apps[application]
+	
+	local activeLocale = locale or GAME_LOCALE or gameLocale
+
+	if not silent and not AceLocale.apps[application] then
+		error("Usage: GetLocale(application[, locale[, silent]]): 'application' - No locales registered for '"..tostring(application).."'", 2)
+	end
+	
+	local app = AceLocale.apps[application]
+	if not app then return nil end
+
+	-- Support for ElvUI sub-locale table or standard flat table
+	if app[activeLocale] then
+		return app[activeLocale]
+	end
+	
+	-- Fallback to default/base if requested locale missing
+	return app["enUS"] or app
 end
+
+-- Register as ElvUI specialty version as well
+LibStub:NewLibrary("AceLocale-3.0-ElvUI", MINOR)
