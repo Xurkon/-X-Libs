@@ -51,70 +51,20 @@ if not BackdropTemplate then
 	BackdropTemplate = {}
 end
 
--- Intercept CreateFrame to handle Retail-only templates and comma-separated lists
-local original_CreateFrame = CreateFrame
-_G.CreateFrame = function(frameType, name, parent, template, ...)
-	local applyDialogBackdrop = false
-	if template then
-		if type(template) == "string" then
-			local templates = {}
-			for t in template:gmatch("[^,]+") do
-				local cleanT = t:match("^%s*(.-)%s*$") -- safe trim
-				if cleanT and cleanT ~= "" then
-					if cleanT == "BackdropTemplate" or cleanT == "DialogBorderOpaqueTemplate" or cleanT == "TooltipBackdropTemplate" then
-						if cleanT == "DialogBorderOpaqueTemplate" then applyDialogBackdrop = true end
-					else
-						table.insert(templates, cleanT)
-					end
-				end
-			end
-			template = #templates > 0 and table.concat(templates, ", ") or nil
-		elseif type(template) == "table" then
-			-- (Rest of template table handling...)
-			for i = #template, 1, -1 do
-				local t = template[i]
-				if t == "BackdropTemplate" or t == "DialogBorderOpaqueTemplate" or t == "TooltipBackdropTemplate" then
-					if t == "DialogBorderOpaqueTemplate" then applyDialogBackdrop = true end
-					table.remove(template, i)
-				end
-			end
-		end
-	end
-	
-	local frame = original_CreateFrame(frameType, name, parent, template, ...)
-	
-	if frame then
-		-- Shim: SetFixedFrameStrata (Retail only)
-		if not frame.SetFixedFrameStrata then
-			frame.SetFixedFrameStrata = function(self, strata)
-				if type(strata) == "string" then
-					self:SetFrameStrata(strata)
-				end
-			end
-		end
-
-		-- Shim: SetFixedFrameLevel (Retail only)
-		if not frame.SetFixedFrameLevel then
-			frame.SetFixedFrameLevel = function(self, level)
-				if type(level) == "number" then
-					self:SetFrameLevel(level)
-				end
-			end
-		end
-
-		-- Apply fallback backdrop if DialogBorderOpaqueTemplate was requested but stripped
-		if applyDialogBackdrop and frame.SetBackdrop then
-			frame:SetBackdrop({
-				bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Opaque",
-				edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-				tile = true, tileSize = 32, edgeSize = 32,
-				insets = { left = 11, right = 12, top = 12, bottom = 11 }
-			})
-		end
-	end
-	
-	return frame
+-----------------------------------------------------------------------
+-- BackdropTemplate shim for WotLK
+-- AceGUI-3.0 and other libs use "BackdropTemplate" which doesn't exist in WotLK
+-----------------------------------------------------------------------
+if not BackdropTemplate then
+	BackdropTemplate = {}
 end
+
+-- CreateFrame wrapper removed because dynamically altering _G.CreateFrame taints ALL frames
+-- created by addons, entirely breaking standard Blizzard macro usage and secure action bindings.
+
+-- Instead of redefining CreateFrame to strip BackdropTemplate, we expect addons like AceGUI
+-- to correctly feature-detect BackdropTemplateMixin and fallback correctly, which AceGUI already does.
+
 
 -- This file MUST be loaded FIRST, before any other addon code.
 -- It creates all missing C_* namespaces, Enum tables, and WOW_PROJECT constants
@@ -125,17 +75,22 @@ local COMPAT_VERSION = "1.0"
 -- CRITICAL: Create ALL missing namespaces BEFORE any library code runs
 -- These must be global (_G prefix not needed since we're in global scope)
 
--- C_AddOns shim (WotLK has GetAddOnMetadata as global, not C_ namespace)
-C_AddOns = C_AddOns or {}
+-- C_AddOns shim
+_G.C_AddOns = _G.C_AddOns or {}
 C_AddOns.GetAddOnMetadata = C_AddOns.GetAddOnMetadata or GetAddOnMetadata
 C_AddOns.GetAddOnInfo = C_AddOns.GetAddOnInfo or GetAddOnInfo
 C_AddOns.GetNumAddOns = C_AddOns.GetNumAddOns or GetNumAddOns
 C_AddOns.IsAddOnLoaded = C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+C_AddOns.EnableAddOn = C_AddOns.EnableAddOn or EnableAddOn
+C_AddOns.DisableAddOn = C_AddOns.DisableAddOn or DisableAddOn
 
 -- C_UnitAuras shim (Retail returns a table, WotLK returns raw values)
-C_UnitAuras = C_UnitAuras or {}
+_G.C_UnitAuras = _G.C_UnitAuras or {}
 C_UnitAuras.GetAuraDataByIndex = C_UnitAuras.GetAuraDataByIndex or function(unit, index, filter)
-	local name, rank, icon, count, debuffType, duration, expirationTime, unitCaster, isStealable, shouldConsolidate, spellId = UnitAura(unit, index, filter)
+	local isBuff = not filter or not filter:find("HARMFUL")
+	local fn = isBuff and UnitBuff or UnitDebuff
+	local name, rank, icon, count, debuffType, duration, expirationTime,
+		unitCaster, isStealable, shouldConsolidate, spellID = fn(unit, index)
 	if not name then return nil end
 	return {
 		name = name,
@@ -145,67 +100,121 @@ C_UnitAuras.GetAuraDataByIndex = C_UnitAuras.GetAuraDataByIndex or function(unit
 		duration = duration or 0,
 		expirationTime = expirationTime or 0,
 		sourceUnit = unitCaster,
+		spellId = spellID or 0,
 		isStealable = isStealable,
-		spellId = spellId or 0,
+		auraInstanceID = index,
+		isHelpful = isBuff,
+		isHarmful = not isBuff,
+	}
+end
+C_UnitAuras.GetBuffDataByIndex = C_UnitAuras.GetBuffDataByIndex or function(unit, index, filter)
+	return C_UnitAuras.GetAuraDataByIndex(unit, index, filter or "HELPFUL")
+end
+C_UnitAuras.GetDebuffDataByIndex = C_UnitAuras.GetDebuffDataByIndex or function(unit, index, filter)
+	return C_UnitAuras.GetAuraDataByIndex(unit, index, filter or "HARMFUL")
+end
+
+-- C_Map namespace (Heavy shimming for 3.3.5a)
+_G.C_Map = _G.C_Map or {}
+C_Map._mapInfoCache = C_Map._mapInfoCache or {}
+C_Map._mapChildrenCache = C_Map._mapChildrenCache or {}
+C_Map._mapGroupCache = C_Map._mapGroupCache or {}
+C_Map._areaToMapID = C_Map._areaToMapID or {}
+C_Map._mapToAreaID = C_Map._mapToAreaID or {}
+
+C_Map.GetBestMapForUnit = C_Map.GetBestMapForUnit or function(unitToken)
+	if unitToken == "player" then
+		SetMapToCurrentZone()
+		local areaID = GetCurrentMapAreaID()
+		if areaID and C_Map._areaToMapID[areaID] then
+			return C_Map._areaToMapID[areaID]
+		end
+		return areaID or 0
+	end
+	return 0
+end
+
+C_Map.GetMapInfo = C_Map.GetMapInfo or function(mapID)
+	if not mapID then return nil end
+	local cached = C_Map._mapInfoCache[mapID]
+	if cached then return cached end
+	return {
+		mapID = mapID,
+		name = GetMapInfo() or "Unknown",
+		mapType = Enum.UIMapType and Enum.UIMapType.Zone or 3,
+		parentMapID = 0,
 	}
 end
 
--- C_Map shim (WotLK has different map API)
-C_Map = C_Map or {}
-C_Map.GetBestMapForUnit = C_Map.GetBestMapForUnit or function(unit)
-	if unit == "player" then return GetCurrentMapAreaID() end
+C_Map.GetPlayerMapPosition = C_Map.GetPlayerMapPosition or function(mapID, unitToken)
+	if unitToken == "player" then
+		local x, y = GetPlayerMapPosition("player")
+		if x and y then
+			return { x = x, y = y }
+		end
+	end
 	return nil
 end
 
--- Enum (Retail-only global) - must be fully stubbed
-Enum = Enum or {}
--- Enum.UIWidgetScaleMode
-if not Enum.UIWidgetScaleMode then
-	Enum.UIWidgetScaleMode = { Automatic = 0, Manual = 1 }
+C_Map.GetMapChildrenInfo = C_Map.GetMapChildrenInfo or function(mapID, mapType, allDescendants)
+	local children = C_Map._mapChildrenCache[mapID]
+	if not children then return {} end
+	if not mapType then return children end
+	local filtered = {}
+	for _, child in ipairs(children) do
+		if child.mapType == mapType then
+			table.insert(filtered, child)
+		end
+	end
+	return filtered
 end
--- Enum.CommonQuality
-if not Enum.CommonQuality then
-	Enum.CommonQuality = { Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4 }
+
+C_Map.GetWorldPosFromMapPos = C_Map.GetWorldPosFromMapPos or function(mapID, mapPos)
+	return 0, CreateVector2D and CreateVector2D(0, 0) or { x = 0, y = 0 }
 end
--- Enum.ItemQuality
-if not Enum.ItemQuality then
-	Enum.ItemQuality = { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Artifact = 6, Heirloom = 7 }
+
+C_Map.GetMapGroupID = C_Map.GetMapGroupID or function(mapID)
+	return C_Map._mapGroupCache[mapID] or 0
 end
--- Enum.UIMapType
-if not Enum.UIMapType then
-	Enum.UIMapType = {
-		Cosmic = 0,
-		World = 1,
-		Continent = 2,
-		Zone = 3,
-		Dungeon = 4,
-		Micro = 5,
-		Orphan = 6,
-	}
+
+C_Map.GetMapGroupMembersInfo = C_Map.GetMapGroupMembersInfo or function(groupID)
+	return {}
 end
--- Enum.QuestFrequency
-if not Enum.QuestFrequency then
-	Enum.QuestFrequency = {
-		Default = 0,
-		Daily = 1,
-		Weekly = 2,
-	}
+
+C_Map.GetMapInfoAtPosition = C_Map.GetMapInfoAtPosition or function(mapID, x, y)
+	return nil
 end
--- Enum.QuestTagType
-if not Enum.QuestTagType then
-	Enum.QuestTagType = {
-		None = 0,
-		Elite = 1,
-		Primary = 2,
-		Secondary = 3,
-		PvP = 4,
-		 Dungeon = 5,
-		Scenario = 6,
-		Raid = 7,
-		Heroic = 8,
-		Ridable = 9,
-	}
+
+C_Map.GetMapLinksForMap = C_Map.GetMapLinksForMap or function(mapID)
+	return {}
 end
+
+C_Map.GetFallbackWorldMapID = C_Map.GetFallbackWorldMapID or function()
+	return 947 -- Azeroth
+end
+
+C_Map.GetMapArtID = C_Map.GetMapArtID or function(mapID)
+	return 0
+end
+
+C_Map.GetMapLevels = C_Map.GetMapLevels or function(mapID)
+	return 0, 0
+end
+
+C_Map.GetAreaInfo = C_Map.GetAreaInfo or function(areaID)
+	if GetAreaInfo then return GetAreaInfo(areaID) end
+	return nil
+end
+
+-- Enum (Retail-only global)
+_G.Enum = _G.Enum or {}
+Enum.UIWidgetScaleMode = Enum.UIWidgetScaleMode or { Automatic = 0, Manual = 1 }
+Enum.CommonQuality = Enum.CommonQuality or { Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4 }
+Enum.ItemQuality = Enum.ItemQuality or { Poor = 0, Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Artifact = 6, Heirloom = 7 }
+Enum.UIMapType = Enum.UIMapType or { Cosmic = 0, World = 1, Continent = 2, Zone = 3, Dungeon = 4, Micro = 5, Orphan = 6 }
+Enum.QuestFrequency = Enum.QuestFrequency or { Default = 0, Daily = 1, Weekly = 2 }
+Enum.QuestTagType = Enum.QuestTagType or { None = 0, Elite = 1, Primary = 2, Secondary = 3, PvP = 4, Dungeon = 5, Scenario = 6, Raid = 7, Heroic = 8, Ridable = 9 }
+Enum.QuestWatchType = Enum.QuestWatchType or { Automatic = 0, Manual = 1 }
 -- Enum.GamePadKeyCode
 if not Enum.GamePadKeyCode then
 	Enum.GamePadKeyCode = {
@@ -271,9 +280,12 @@ C_Item.PlayerHasEquippedItem = C_Item.PlayerHasEquippedItem or function(itemId)
 end
 
 -- C_Spell (Retail API for spell operations)
-C_Spell = C_Spell or {}
+_G.C_Spell = _G.C_Spell or {}
 C_Spell.GetSpellInfo = C_Spell.GetSpellInfo or function(spellId)
-	return GetSpellInfo(spellId)
+	if not spellId then return nil end
+	local name, rank, icon, castTime, minRange, maxRange = GetSpellInfo(spellId)
+	if not name then return nil end
+	return { name = name, nameID = name, iconID = icon, castTime = castTime, minRange = minRange, maxRange = maxRange }
 end
 C_Spell.GetSpellTexture = C_Spell.GetSpellTexture or function(spellId)
 	local _, _, icon = GetSpellInfo(spellId)
@@ -302,27 +314,7 @@ C_ChatInfo.IsChannelPassword = C_ChatInfo.IsChannelPassword or function() return
 C_ChatInfo.RegisterAddonMessagePrefix = C_ChatInfo.RegisterAddonMessagePrefix or _G.RegisterAddonMessagePrefix or function() return true end
 C_ChatInfo.SendAddonMessage = C_ChatInfo.SendAddonMessage or _G.SendAddonMessage or function() end
 
--- C_TaskQuest (Retail task/quest API)
-C_TaskQuest = C_TaskQuest or {}
-C_TaskQuest.GetQuestIdForTaskIndex = C_TaskQuest.GetQuestIdForTaskIndex or function() return 0 end
-C_TaskQuest.GetNumTaskQuests = C_TaskQuest.GetNumTaskQuests or function() return 0 end
-C_TaskQuest.GetZoneHeaderInformation = C_TaskQuest.GetZoneHeaderInformation or function() return nil end
-C_TaskQuest.DoesQuestIDExist = C_TaskQuest.DoesQuestIDExist or function() return false end
-
--- C_MajorCategories
-C_MajorCategories = _G.C_MajorCategories or {}
-C_MajorCategories.GetCategories = C_MajorCategories.GetCategories or function() return {} end
-
--- C_Spell (Retail spell API)
-C_Spell = _G.C_Spell or {}
-if not C_Spell.GetSpellInfo then
-	C_Spell.GetSpellInfo = function(spellID)
-		if not spellID then return nil end
-		local name, rank, icon, castTime, minRange, maxRange = GetSpellInfo(spellID)
-		if not name then return nil end
-		return { name = name, iconID = icon, castTime = castTime, minRange = minRange, maxRange = maxRange }
-	end
-end
+-- C_Spell logic consolidated above
 
 -- C_Minimicons
 C_Minimicons = C_Minimicons or {}
@@ -334,21 +326,194 @@ C_Club = C_Club or {}
 C_Club.GetClubIds = C_Club.GetClubIds or function() return {} end
 C_Club.GetClubInfo = C_Club.GetClubInfo or function() return nil end
 
--- C_QuestLog & C_Map shims (minimal for stabilization)
+-- C_QuestLog namespace (Robust shimming for 3.3.5a)
 _G.C_QuestLog = _G.C_QuestLog or {}
-C_QuestLog.IsQuestFlaggedCompleted = C_QuestLog.IsQuestFlaggedCompleted or IsQuestFlaggedCompleted
-C_QuestLog.GetSelectedQuest = C_QuestLog.GetSelectedQuest or GetQuestLogSelection
-C_QuestLog.GetNumQuestLogEntries = C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries
-C_QuestLog.GetInfo = C_QuestLog.GetInfo or function(index)
-	local title, level, tag, isHeader, isCollapsed, isComplete, frequency, questID = GetQuestLogTitle(index)
-	if not title then return nil end
-	return { title = title, level = level, questID = questID, isHeader = isHeader, frequency = frequency }
+
+C_QuestLog.GetNumQuestLogEntries = C_QuestLog.GetNumQuestLogEntries or function()
+	return GetNumQuestLogEntries()
 end
-C_QuestLog.GetNumWorldQuestWatches = C_QuestLog.GetNumWorldQuestWatches or function() return 0 end
-C_QuestLog.IsWorldQuestWatched = C_QuestLog.IsWorldQuestWatched or function() return false end
-C_QuestLog.AddWorldQuestWatch = C_QuestLog.AddWorldQuestWatch or function() end
-C_QuestLog.RemoveWorldQuestWatch = C_QuestLog.RemoveWorldQuestWatch or function() end
-C_QuestLog.GetQuestwatchnum = C_QuestLog.GetQuestwatchnum or function() return 0 end
+
+C_QuestLog.GetInfo = C_QuestLog.GetInfo or function(index)
+	local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+		isComplete, isDaily, questID = GetQuestLogTitle(index)
+	if not title then return nil end
+	local frequency = 0
+	if isDaily then
+		frequency = Enum.QuestFrequency.Daily
+	end
+	return {
+		title = title,
+		level = level,
+		questID = questID or 0,
+		isHeader = isHeader,
+		isCollapsed = isCollapsed,
+		frequency = frequency,
+		isBounty = false,
+		suggestedGroup = suggestedGroup,
+		questTag = questTag,
+		isComplete = isComplete,
+	}
+end
+
+C_QuestLog.IsQuestFlaggedCompleted = C_QuestLog.IsQuestFlaggedCompleted or function(questID)
+	if IsQuestFlaggedCompleted then
+		return IsQuestFlaggedCompleted(questID)
+	end
+	return false
+end
+
+C_QuestLog.IsQuestFlaggedCompletedOnAccount = C_QuestLog.IsQuestFlaggedCompletedOnAccount or function(questID)
+	return C_QuestLog.IsQuestFlaggedCompleted(questID)
+end
+
+C_QuestLog.IsComplete = C_QuestLog.IsComplete or function(questID)
+	local numEntries = GetNumQuestLogEntries()
+	for i = 1, numEntries do
+		local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+			isComplete, isDaily, qid = GetQuestLogTitle(i)
+		if qid == questID then
+			return isComplete and isComplete > 0
+		end
+	end
+	return false
+end
+
+C_QuestLog.IsFailed = C_QuestLog.IsFailed or function(questID)
+	local numEntries = GetNumQuestLogEntries()
+	for i = 1, numEntries do
+		local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+			isComplete, isDaily, qid = GetQuestLogTitle(i)
+		if qid == questID then
+			return isComplete and isComplete < 0
+		end
+	end
+	return false
+end
+
+C_QuestLog.IsOnQuest = C_QuestLog.IsOnQuest or function(questID)
+	local numEntries = GetNumQuestLogEntries()
+	for i = 1, numEntries do
+		local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+			isComplete, isDaily, qid = GetQuestLogTitle(i)
+		if qid == questID and not isHeader then
+			return true
+		end
+	end
+	return false
+end
+
+C_QuestLog.GetSelectedQuest = C_QuestLog.GetSelectedQuest or function()
+	return GetQuestLogSelection()
+end
+
+C_QuestLog.SetSelectedQuest = C_QuestLog.SetSelectedQuest or function(questID)
+	local numEntries = GetNumQuestLogEntries()
+	for i = 1, numEntries do
+		local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+			isComplete, isDaily, qid = GetQuestLogTitle(i)
+		if qid == questID then
+			SelectQuestLogEntry(i)
+			return
+		end
+	end
+end
+
+C_QuestLog.SetAbandonQuest = C_QuestLog.SetAbandonQuest or function()
+	SetAbandonQuest()
+end
+
+C_QuestLog.AbandonQuest = C_QuestLog.AbandonQuest or function()
+	AbandonQuest()
+end
+
+C_QuestLog.GetTitleForLogIndex = C_QuestLog.GetTitleForLogIndex or function(index)
+	local title = GetQuestLogTitle(index)
+	return title
+end
+
+C_QuestLog.GetTitleForQuestID = C_QuestLog.GetTitleForQuestID or function(questID)
+	local numEntries = GetNumQuestLogEntries()
+	for i = 1, numEntries do
+		local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+			isComplete, isDaily, qid = GetQuestLogTitle(i)
+		if qid == questID and not isHeader then
+			return title
+		end
+	end
+	return nil
+end
+
+C_QuestLog.GetQuestInfo = C_QuestLog.GetQuestInfo or function(questID)
+	return C_QuestLog.GetTitleForQuestID(questID)
+end
+
+C_QuestLog.GetNumWorldQuestWatches = C_QuestLog.GetNumWorldQuestWatches or function()
+	return 0
+end
+
+C_QuestLog.GetQuestIDForWorldQuestWatchIndex = C_QuestLog.GetQuestIDForWorldQuestWatchIndex or function()
+	return nil
+end
+
+C_QuestLog.GetQuestWatchType = C_QuestLog.GetQuestWatchType or function(questID)
+	if IsQuestWatched then
+		local numEntries = GetNumQuestLogEntries()
+		for i = 1, numEntries do
+			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+				isComplete, isDaily, qid = GetQuestLogTitle(i)
+			if qid == questID and not isHeader then
+				if IsQuestWatched(i) then
+					return Enum.QuestWatchType.Manual
+				end
+				return nil
+			end
+		end
+	end
+	return nil
+end
+
+C_QuestLog.AddQuestWatch = C_QuestLog.AddQuestWatch or function(questID, watchType)
+	if AddQuestWatch then
+		local numEntries = GetNumQuestLogEntries()
+		for i = 1, numEntries do
+			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+				isComplete, isDaily, qid = GetQuestLogTitle(i)
+			if qid == questID and not isHeader then
+				AddQuestWatch(i)
+				return
+			end
+		end
+	end
+end
+
+C_QuestLog.RemoveQuestWatch = C_QuestLog.RemoveQuestWatch or function(questID)
+	if RemoveQuestWatch then
+		local numEntries = GetNumQuestLogEntries()
+		for i = 1, numEntries do
+			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
+				isComplete, isDaily, qid = GetQuestLogTitle(i)
+			if qid == questID and not isHeader then
+				RemoveQuestWatch(i)
+				return
+			end
+		end
+	end
+end
+
+C_QuestLog.GetNumQuestWatches = C_QuestLog.GetNumQuestWatches or function()
+	if GetNumQuestWatches then
+		return GetNumQuestWatches()
+	end
+	return 0
+end
+
+C_QuestLog.GetActiveThreatMaps = C_QuestLog.GetActiveThreatMaps or function()
+	return nil
+end
+
+C_QuestLog.RequestLoadQuestByID = C_QuestLog.RequestLoadQuestByID or function(questID)
+	-- no-op in 3.3.5a
+end
 
 -----------------------------------------------------------------------
 -- Vector2D polyfill for 3.3.5a
@@ -390,22 +555,7 @@ if GetContainerItemLink then
     C_Container.GetContainerItemLink = C_Container.GetContainerItemLink or GetContainerItemLink
 end
 
--- C_Map Namespace Stabilization
-_G.C_Map = _G.C_Map or {}
-if not C_Map.GetBestMapForUnit then
-    C_Map.GetBestMapForUnit = function(unit)
-        if unit == "player" then
-            return GetCurrentMapAreaID()
-        end
-        return 0
-    end
-end
-
-if not C_Map.GetMapInfo then
-    C_Map.GetMapInfo = function(uiMapID)
-        return { name = GetMapInfo() or "Unknown", mapType = 3 }
-    end
-end
+-- C_Map Namespace Stabilization (Consolidated)
 
 -- IsPlayerSpell Shim for 3.3.5a
 if not _G.IsPlayerSpell then
@@ -416,16 +566,9 @@ if not _G.IsPlayerSpell then
 end
 
 -- WorldMapFrame / UIParent AddDataProvider shim for HereBeDragons
-local function fixAddDataProvider(frame)
-    if frame and not frame.AddDataProvider then
-        frame.AddDataProvider = function() end
-    end
-end
+-- Removed: Modifying secure global frames (UIParent, WorldMapFrame, GameTooltip) 
+-- from insecure addon code causes massive taint and breaks standard Blizz keybinds.
 
--- Only apply to existing globals to avoid poisoning
-fixAddDataProvider(WorldMapFrame)
-fixAddDataProvider(UIParent)
-fixAddDataProvider(GameTooltip)
 
 -----------------------------------------------------------------------
 -- C_Timer shim
@@ -487,37 +630,7 @@ if not WOW_PROJECT_ID then
 	end
 end
 
------------------------------------------------------------------------
--- Enum shims
------------------------------------------------------------------------
-if not Enum then Enum = {} end
-
-if not Enum.UIMapType then
-	Enum.UIMapType = {
-		Cosmic = 0,
-		World = 1,
-		Continent = 2,
-		Zone = 3,
-		Dungeon = 4,
-		Micro = 5,
-		Orphan = 6,
-	}
-end
-
-if not Enum.QuestFrequency then
-	Enum.QuestFrequency = {
-		Default = 0,
-		Daily = 1,
-		Weekly = 2,
-	}
-end
-
-if not Enum.QuestWatchType then
-	Enum.QuestWatchType = {
-		Automatic = 0,
-		Manual = 1,
-	}
-end
+-- Enum logic consolidated above
 
 if not Enum.UIMapSystem then
 	Enum.UIMapSystem = {
@@ -614,321 +727,12 @@ if not MapUtil then
 	}
 end
 
------------------------------------------------------------------------
--- C_AddOns namespace
------------------------------------------------------------------------
-if not C_AddOns then
-	C_AddOns = {}
-	C_AddOns.GetAddOnMetadata = function(name, field)
-		if GetAddOnMetadata then return GetAddOnMetadata(name, field) end
-		return nil
-	end
-	C_AddOns.GetAddOnInfo = function(indexOrName)
-		if GetAddOnInfo then return GetAddOnInfo(indexOrName) end
-		return nil
-	end
-	C_AddOns.GetNumAddOns = function()
-		if GetNumAddOns then return GetNumAddOns() end
-		return 0
-	end
-end
+-- C_AddOns logic consolidated above
 
------------------------------------------------------------------------
--- C_QuestLog namespace
------------------------------------------------------------------------
-if not C_QuestLog then
-	C_QuestLog = {}
+-- C_QuestLog logic consolidated above
 
-	C_QuestLog.GetNumQuestLogEntries = function()
-		return GetNumQuestLogEntries()
-	end
-
-	C_QuestLog.GetInfo = function(index)
-		local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-			isComplete, isDaily, questID = GetQuestLogTitle(index)
-		if not title then return nil end
-		local frequency = 0
-		if isDaily then
-			frequency = Enum.QuestFrequency.Daily
-		end
-		return {
-			title = title,
-			level = level,
-			questID = questID or 0,
-			isHeader = isHeader,
-			isCollapsed = isCollapsed,
-			frequency = frequency,
-			isBounty = false,
-			suggestedGroup = suggestedGroup,
-			questTag = questTag,
-			isComplete = isComplete,
-		}
-	end
-
-	C_QuestLog.IsQuestFlaggedCompleted = function(questID)
-		if IsQuestFlaggedCompleted then
-			return IsQuestFlaggedCompleted(questID)
-		end
-		return false
-	end
-
-	C_QuestLog.IsQuestFlaggedCompletedOnAccount = function(questID)
-		return C_QuestLog.IsQuestFlaggedCompleted(questID)
-	end
-
-	C_QuestLog.IsComplete = function(questID)
-		local numEntries = GetNumQuestLogEntries()
-		for i = 1, numEntries do
-			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-				isComplete, isDaily, qid = GetQuestLogTitle(i)
-			if qid == questID then
-				return isComplete and isComplete > 0
-			end
-		end
-		return false
-	end
-
-	C_QuestLog.IsFailed = function(questID)
-		local numEntries = GetNumQuestLogEntries()
-		for i = 1, numEntries do
-			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-				isComplete, isDaily, qid = GetQuestLogTitle(i)
-			if qid == questID then
-				return isComplete and isComplete < 0
-			end
-		end
-		return false
-	end
-
-	C_QuestLog.IsOnQuest = function(questID)
-		local numEntries = GetNumQuestLogEntries()
-		for i = 1, numEntries do
-			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-				isComplete, isDaily, qid = GetQuestLogTitle(i)
-			if qid == questID and not isHeader then
-				return true
-			end
-		end
-		return false
-	end
-
-	C_QuestLog.GetSelectedQuest = function()
-		return GetQuestLogSelection()
-	end
-
-	C_QuestLog.SetSelectedQuest = function(questID)
-		local numEntries = GetNumQuestLogEntries()
-		for i = 1, numEntries do
-			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-				isComplete, isDaily, qid = GetQuestLogTitle(i)
-			if qid == questID then
-				SelectQuestLogEntry(i)
-				return
-			end
-		end
-	end
-
-	C_QuestLog.SetAbandonQuest = function()
-		SetAbandonQuest()
-	end
-
-	C_QuestLog.AbandonQuest = function()
-		AbandonQuest()
-	end
-
-	C_QuestLog.GetTitleForLogIndex = function(index)
-		local title = GetQuestLogTitle(index)
-		return title
-	end
-
-	C_QuestLog.GetTitleForQuestID = function(questID)
-		local numEntries = GetNumQuestLogEntries()
-		for i = 1, numEntries do
-			local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-				isComplete, isDaily, qid = GetQuestLogTitle(i)
-			if qid == questID and not isHeader then
-				return title
-			end
-		end
-		return nil
-	end
-
-	C_QuestLog.GetQuestInfo = function(questID)
-		return C_QuestLog.GetTitleForQuestID(questID)
-	end
-
-	C_QuestLog.GetQuestType = nil
-
-	C_QuestLog.GetNumWorldQuestWatches = function()
-		return 0
-	end
-
-	C_QuestLog.GetQuestIDForWorldQuestWatchIndex = function()
-		return nil
-	end
-
-	C_QuestLog.GetQuestWatchType = function(questID)
-		if IsQuestWatched then
-			local numEntries = GetNumQuestLogEntries()
-			for i = 1, numEntries do
-				local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-					isComplete, isDaily, qid = GetQuestLogTitle(i)
-				if qid == questID and not isHeader then
-					if IsQuestWatched(i) then
-						return Enum.QuestWatchType.Manual
-					end
-					return nil
-				end
-			end
-		end
-		return nil
-	end
-
-	C_QuestLog.AddQuestWatch = function(questID, watchType)
-		if AddQuestWatch then
-			local numEntries = GetNumQuestLogEntries()
-			for i = 1, numEntries do
-				local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-					isComplete, isDaily, qid = GetQuestLogTitle(i)
-				if qid == questID and not isHeader then
-					AddQuestWatch(i)
-					return
-				end
-			end
-		end
-	end
-
-	C_QuestLog.RemoveQuestWatch = function(questID)
-		if RemoveQuestWatch then
-			local numEntries = GetNumQuestLogEntries()
-			for i = 1, numEntries do
-				local title, level, questTag, suggestedGroup, isHeader, isCollapsed,
-					isComplete, isDaily, qid = GetQuestLogTitle(i)
-				if qid == questID and not isHeader then
-					RemoveQuestWatch(i)
-					return
-				end
-			end
-		end
-	end
-
-	C_QuestLog.GetNumQuestWatches = function()
-		if GetNumQuestWatches then
-			return GetNumQuestWatches()
-		end
-		return 0
-	end
-
-	C_QuestLog.GetActiveThreatMaps = function()
-		return nil
-	end
-
-	C_QuestLog.RequestLoadQuestByID = function(questID)
-		-- no-op in 3.3.5a
-	end
-end
-
------------------------------------------------------------------------
--- C_Map namespace
--- This is the most critical shim. MapData-335.lua provides static lookup tables.
--- Some functions are stubs that return safe defaults until MapData-335.lua loads.
------------------------------------------------------------------------
-if not C_Map then
-	C_Map = {}
-
-	-- These will be populated by MapData-335.lua
-	C_Map._mapInfoCache = {}
-	C_Map._mapChildrenCache = {}
-	C_Map._mapGroupCache = {}
-	C_Map._areaToMapID = {}
-	C_Map._mapToAreaID = {}
-
-	C_Map.GetBestMapForUnit = function(unitToken)
-		if unitToken == "player" then
-			SetMapToCurrentZone()
-			local areaID = GetCurrentMapAreaID()
-			if areaID and C_Map._areaToMapID[areaID] then
-				return C_Map._areaToMapID[areaID]
-			end
-			return areaID or 0
-		end
-		return 0
-	end
-
-	C_Map.GetPlayerMapPosition = function(mapID, unitToken)
-		if unitToken == "player" then
-			local x, y = GetPlayerMapPosition("player")
-			if x and y then
-				return { x = x, y = y }
-			end
-		end
-		return nil
-	end
-
-	C_Map.GetMapInfo = function(mapID)
-		if not mapID then return nil end
-		local cached = C_Map._mapInfoCache[mapID]
-		if cached then return cached end
-		return {
-			mapID = mapID,
-			name = "Unknown",
-			mapType = Enum.UIMapType.Zone,
-			parentMapID = 0,
-		}
-	end
-
-	C_Map.GetMapChildrenInfo = function(mapID, mapType, allDescendants)
-		local children = C_Map._mapChildrenCache[mapID]
-		if not children then return {} end
-		if not mapType then return children end
-		local filtered = {}
-		for _, child in ipairs(children) do
-			if child.mapType == mapType then
-				table.insert(filtered, child)
-			end
-		end
-		return filtered
-	end
-
-	C_Map.GetWorldPosFromMapPos = function(mapID, mapPos)
-		-- Stub: returns 0,0 as a safe default.
-		-- HereBeDragons handles this internally with its own data.
-		return 0, CreateVector2D and CreateVector2D(0, 0) or { x = 0, y = 0 }
-	end
-
-	C_Map.GetMapGroupID = function(mapID)
-		return C_Map._mapGroupCache[mapID] or 0
-	end
-
-	C_Map.GetMapGroupMembersInfo = function(groupID)
-		return {}
-	end
-
-	C_Map.GetMapInfoAtPosition = function(mapID, x, y)
-		return nil
-	end
-
-	C_Map.GetMapLinksForMap = function(mapID)
-		return {}
-	end
-
-	C_Map.GetFallbackWorldMapID = function()
-		return 947 -- Azeroth
-	end
-
-	C_Map.GetMapArtID = function(mapID)
-		return 0
-	end
-
-	C_Map.GetMapLevels = function(mapID)
-		return 0, 0
-	end
-
-	C_Map.GetAreaInfo = function(areaID)
-		if GetAreaInfo then return GetAreaInfo(areaID) end
-		return nil
-	end
-end
+-- C_Map logic consolidated above
+-- C_Map logic consolidated above
 
 -----------------------------------------------------------------------
 -- CreateVector2D shim
@@ -942,60 +746,15 @@ if not CreateVector2D then
 end
 
 -----------------------------------------------------------------------
--- Texture:SetColorTexture shim
--- Polyfills SetColorTexture for cross-expansion UI compatibility
 -----------------------------------------------------------------------
-local TextureMeta = getmetatable(CreateFrame("Frame"):CreateTexture()).__index
-if not TextureMeta.SetColorTexture then
-	TextureMeta.SetColorTexture = function(self, ...)
-		self:SetTexture(...)
-	end
-end
-
+-- Polyfills modern UI Object Methods
+-- Note: It is inherently impossible to modify Object Metatables (TextureMeta, FrameMeta, etc.)
+-- on the WotLK client without severe UI Taint. Native UI code indexes frames expecting
+-- pure WoW C-code, and encountering an addon closure triggers an action blocked event. 
+--
+-- For universal compatibility, addons MUST use feature detection natively:
+-- e.g. `if tex.SetColorTexture then tex:SetColorTexture(r,g,b) else tex:SetTexture(r,g,b) end`
 -----------------------------------------------------------------------
--- Frame:SetClipsChildren shim
--- Polyfills SetClipsChildren for cross-expansion UI compatibility
------------------------------------------------------------------------
-local FrameMeta = getmetatable(CreateFrame("Frame")).__index
-if not FrameMeta.SetClipsChildren then
-	FrameMeta.SetClipsChildren = function(self, ...)
-		-- No-op for WotLK
-	end
-end
-
------------------------------------------------------------------------
--- Button:SetEnabled shim
--- Polyfills SetEnabled(bool) to map to Enable() and Disable()
------------------------------------------------------------------------
-local ButtonMeta = getmetatable(CreateFrame("Button")).__index
-if not ButtonMeta.SetEnabled then
-	ButtonMeta.SetEnabled = function(self, state)
-		if state then
-			self:Enable()
-		else
-			self:Disable()
-		end
-	end
-end
-
------------------------------------------------------------------------
--- ApplyBackdrop shim
--- Polyfills modern BackdropTemplateMixin:ApplyBackdrop()
------------------------------------------------------------------------
-local function ShimApplyBackdrop(self)
-	if self.backdropInfo then
-		self:SetBackdrop(self.backdropInfo)
-	end
-end
-
-if not FrameMeta.ApplyBackdrop then FrameMeta.ApplyBackdrop = ShimApplyBackdrop end
-if not ButtonMeta.ApplyBackdrop then ButtonMeta.ApplyBackdrop = ShimApplyBackdrop end
-local EditBoxMeta = getmetatable(CreateFrame("EditBox")).__index
-if not EditBoxMeta.ApplyBackdrop then EditBoxMeta.ApplyBackdrop = ShimApplyBackdrop end
-local ScrollFrameMeta = getmetatable(CreateFrame("ScrollFrame")).__index
-if not ScrollFrameMeta.ApplyBackdrop then ScrollFrameMeta.ApplyBackdrop = ShimApplyBackdrop end
-local SliderMeta = getmetatable(CreateFrame("Slider")).__index
-if not SliderMeta.ApplyBackdrop then SliderMeta.ApplyBackdrop = ShimApplyBackdrop end
 
 -----------------------------------------------------------------------
 -- Mixin / CreateFromMixins shims
@@ -1020,41 +779,7 @@ if not CreateFromMixins then
 	end
 end
 
------------------------------------------------------------------------
--- C_UnitAuras namespace
------------------------------------------------------------------------
-if not C_UnitAuras then
-	C_UnitAuras = {}
-
-	C_UnitAuras.GetAuraDataByIndex = function(unit, index, filter)
-		local isBuff = not filter or not filter:find("HARMFUL")
-		local fn = isBuff and UnitBuff or UnitDebuff
-		local name, rank, icon, count, debuffType, duration, expirationTime,
-			unitCaster, isStealable, shouldConsolidate, spellID = fn(unit, index)
-		if not name then return nil end
-		return {
-			name = name,
-			icon = icon,
-			applications = count or 0,
-			duration = duration or 0,
-			expirationTime = expirationTime or 0,
-			sourceUnit = unitCaster,
-			spellId = spellID,
-			isStealable = isStealable,
-			auraInstanceID = index,
-			isHelpful = isBuff,
-			isHarmful = not isBuff,
-		}
-	end
-
-	C_UnitAuras.GetBuffDataByIndex = function(unit, index, filter)
-		return C_UnitAuras.GetAuraDataByIndex(unit, index, filter or "HELPFUL")
-	end
-
-	C_UnitAuras.GetDebuffDataByIndex = function(unit, index, filter)
-		return C_UnitAuras.GetAuraDataByIndex(unit, index, filter or "HARMFUL")
-	end
-end
+-- C_UnitAuras logic consolidated above
 
 -----------------------------------------------------------------------
 -- C_GossipInfo namespace
