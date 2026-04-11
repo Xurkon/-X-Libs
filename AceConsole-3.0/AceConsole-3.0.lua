@@ -10,10 +10,11 @@
 -- @class file
 -- @name AceConsole-3.0
 -- @release $Id$
-local MAJOR,MINOR = "AceConsole-3.0", 99
+local MAJOR,MINOR = "AceConsole-3.0", 7
 
-local AceConsole = LibStub:NewLibrary(MAJOR, MINOR)
-if not AceConsole then return end
+local AceConsole, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
+
+if not AceConsole then return end -- No upgrade needed
 
 AceConsole.embeds = AceConsole.embeds or {} -- table containing objects AceConsole is embedded in.
 AceConsole.commands = AceConsole.commands or {} -- table containing commands registered
@@ -27,6 +28,10 @@ local max = math.max
 
 -- WoW APIs
 local _G = _G
+
+-- Global vars/functions that we don't upvalue since they might get hooked, or upgraded
+-- List them here for Mikk's FindGlobals script
+-- GLOBALS: DEFAULT_CHAT_FRAME, SlashCmdList, hash_SlashCmdList
 
 local tmp={}
 local function Print(self,frame,...)
@@ -169,7 +174,7 @@ function AceConsole:GetArgs(str, numargs, startpos)
 
 	while true do
 		-- find delimiter or hyperlink
-		local _
+		local ch,_
 		pos,_,ch = strfind(str, delim_or_pipe, pos)
 
 		if not pos then break end

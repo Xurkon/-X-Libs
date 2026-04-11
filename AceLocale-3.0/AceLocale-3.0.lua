@@ -23,7 +23,7 @@ AceLocale.appnames = AceLocale.appnames or {}  -- array of [localetableref]="App
 local readmeta = {
 	__index = function(self, key) -- requesting totally unknown entries: fire off a nonbreaking error and return key
 		rawset(self, key, key)      -- only need to see the warning once, really
-		geterrorhandler()(MAJOR..": "..tostring(AceLocale.appnames[self])..": Missing entry for '"..tostring(key).."'")
+		-- geterrorhandler()(MAJOR..": "..tostring(AceLocale.appnames[self])..": Missing entry for '"..tostring(key).."')
 		return key
 	end
 }
@@ -167,3 +167,7 @@ end
 
 -- Register as ElvUI specialty version as well
 LibStub:NewLibrary("AceLocale-3.0-ElvUI", MINOR)
+
+-- Register as standard AceLocale-3.0 for library compatibility
+LibStub:AddLib("AceLocale-3.0", "AceLocale-3.0", AceLocale, MINOR)
+LibStub:AddLib("AceLocale-3.0-ElvUI", "AceLocale-3.0-ElvUI", AceLocale, MINOR)

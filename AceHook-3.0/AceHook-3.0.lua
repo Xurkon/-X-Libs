@@ -10,9 +10,10 @@
 -- @class file
 -- @name AceHook-3.0
 -- @release $Id$
-local ACEHOOK_MAJOR, ACEHOOK_MINOR = "AceHook-3.0", 99
+local ACEHOOK_MAJOR, ACEHOOK_MINOR = "AceHook-3.0", 9
 local AceHook, oldminor = LibStub:NewLibrary(ACEHOOK_MAJOR, ACEHOOK_MINOR)
-if not AceHook then return end
+
+if not AceHook then return end -- No upgrade needed
 
 AceHook.embeded = AceHook.embeded or {}
 AceHook.registry = AceHook.registry or setmetatable({}, {__index = function(tbl, key) tbl[key] = {} return tbl[key] end })
@@ -194,6 +195,7 @@ function hook(self, obj, method, handler, script, secure, raw, forceSecure, usag
 			registry[self][method] = nil
 		end
 		handlers[uid], actives[uid], scripts[uid] = nil, nil, nil
+		uid = nil
 	end
 
 	local orig

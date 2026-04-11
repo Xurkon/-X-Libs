@@ -23,16 +23,17 @@
 --
 -- function MyAddon:OnDisable()
 --   -- Unhook, Unregister Events, Hide frames that you created.
---   -- You would probably only use an OnDisable if you want to
+--   -- You would probably only have an OnDisable if you want to
 --   -- build a "standby" mode, or be able to toggle modules on/off.
 -- end
 -- @class file
 -- @name AceAddon-3.0.lua
 -- @release $Id$
 
-local MAJOR, MINOR = "AceAddon-3.0", 1000000 + 12
-local AceAddon = LibStub:NewLibrary(MAJOR, MINOR)
-if not AceAddon then return end
+local MAJOR, MINOR = "AceAddon-3.0", 12
+local AceAddon, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
+
+if not AceAddon then return end -- No Upgrade needed.
 
 AceAddon.frame = AceAddon.frame or CreateFrame("Frame", "AceAddon30Frame") -- Our very own frame
 AceAddon.addons = AceAddon.addons or {} -- addons in general
@@ -47,6 +48,10 @@ local fmt, tostring = string.format, tostring
 local select, pairs, next, type, unpack = select, pairs, next, type, unpack
 local loadstring, assert, error = loadstring, assert, error
 local setmetatable, getmetatable, rawset, rawget = setmetatable, getmetatable, rawset, rawget
+
+-- Global vars/functions that we don't upvalue since they might get hooked, or upgraded
+-- List them here for Mikk's FindGlobals script
+-- GLOBALS: LibStub, IsLoggedIn, geterrorhandler
 
 --[[
 	 xpcall safecall implementation
@@ -75,7 +80,7 @@ local function CreateDispatcher(argCount)
 
 	local ARGS = {}
 	for i = 1, argCount do ARGS[i] = "arg"..i end
-	code = code:gsub("ARGS", table.concat(ARGS, ", "))
+	code = code:gsub("ARGS", tconcat(ARGS, ", "))
 	return assert(loadstring(code, "safecall Dispatcher["..argCount.."]"))(xpcall, errorhandler)
 end
 
@@ -89,6 +94,9 @@ Dispatchers[0] = function(func)
 end
 
 local function safecall(func, ...)
+	-- we check to see if the func is passed is actually a function here and don't error when it isn't
+	-- this safecall is used for optional functions like OnInitialize OnEnable etc. When they are not
+	-- present execution should continue without hinderance
 	if type(func) == "function" then
 		return Dispatchers[select('#', ...)](func, ...)
 	end
@@ -99,7 +107,6 @@ local Enable, Disable, EnableModule, DisableModule, Embed, NewModule, GetModule,
 
 -- used in the addon metatable
 local function addontostring( self ) return self.name end
-
 -- Check if the addon is queued for initialization
 local function queuedForInitialization(addon)
 	for i = 1, #AceAddon.initializequeue do
@@ -215,7 +222,7 @@ function AceAddon:EmbedLibrary(addon, libname, silent, offset)
 		tinsert(self.embeds[addon], libname)
 		return true
 	elseif lib then
-		error(("Usage: EmbedLibrary(addon, libname, silent, offset): 'libname' - Library '%s' is not Embed capable"):format(libname), offset or 2)
+		error(("Usage: EmbedLibrary(addon, libname, silent, offset): Library '%s' is not Embed capable"):format(libname), offset or 2)
 	end
 end
 
@@ -289,24 +296,7 @@ function NewModule(self, name, prototype, ...)
 	safecall(self.OnModuleCreated, self, module) -- Was in Ace2 and I think it could be a cool thing to have handy.
 	self.modules[name] = module
 	tinsert(self.orderedModules, module)
-
 	return module
-end
-
---- Register a new module (ElvUI compatibility shim).
--- @name //addon//:RegisterModule
--- @paramsig name
--- @param name unique name of the module
-function RegisterModule(self, name)
-	return self:NewModule(name)
-end
-
---- Register an initial module (ElvUI compatibility shim).
--- @name //addon//:RegisterInitialModule
--- @paramsig name
--- @param name unique name of the module
-function RegisterInitialModule(self, name)
-	return self:NewModule(name)
 end
 
 --- Returns the real name of the addon or module, without any prefix.
@@ -503,8 +493,6 @@ local mixins = {
 	IterateModules = IterateModules,
 	IterateEmbeds = IterateEmbeds,
 	GetName = GetName,
-	RegisterModule = RegisterModule,
-	RegisterInitialModule = RegisterInitialModule,
 }
 local function IsModule(self) return false end
 local pmixins = {
@@ -527,7 +515,6 @@ function Embed(target, skipPMixins)
 	end
 end
 
-
 -- - Initialize the addon after creation.
 -- This function is only used internally during the ADDON_LOADED event
 -- It will call the **OnInitialize** function on the addon object (if present),
@@ -536,15 +523,12 @@ end
 -- **Note:** Do not call this function manually, unless you're absolutely sure that you know what you are doing.
 -- @param addon addon object to intialize
 function AceAddon:InitializeAddon(addon)
-	if not addon then return end
 	safecall(addon.OnInitialize, addon)
 
 	local embeds = self.embeds[addon]
-	if embeds then
-		for i = 1, #embeds do
-			local lib = LibStub:GetLibrary(embeds[i], true)
-			if lib then safecall(lib.OnEmbedInitialize, lib, addon) end
-		end
+	for i = 1, #embeds do
+		local lib = LibStub:GetLibrary(embeds[i], true)
+		if lib then safecall(lib.OnEmbedInitialize, lib, addon) end
 	end
 
 	-- we don't call InitializeAddon on modules specifically, this is handled
@@ -563,7 +547,7 @@ end
 -- @param addon addon object to enable
 function AceAddon:EnableAddon(addon)
 	if type(addon) == "string" then addon = AceAddon:GetAddon(addon) end
-	if not addon or self.statuses[addon.name] or not addon.enabledState then return false end
+	if self.statuses[addon.name] or not addon.enabledState then return false end
 
 	-- set the statuses first, before calling the OnEnable. this allows for Disabling of the addon in OnEnable.
 	self.statuses[addon.name] = true
@@ -573,19 +557,15 @@ function AceAddon:EnableAddon(addon)
 	-- make sure we're still enabled before continueing
 	if self.statuses[addon.name] then
 		local embeds = self.embeds[addon]
-		if embeds then
-			for i = 1, #embeds do
-				local lib = LibStub:GetLibrary(embeds[i], true)
-				if lib then safecall(lib.OnEmbedEnable, lib, addon) end
-			end
+		for i = 1, #embeds do
+			local lib = LibStub:GetLibrary(embeds[i], true)
+			if lib then safecall(lib.OnEmbedEnable, lib, addon) end
 		end
 
 		-- enable possible modules.
 		local modules = addon.orderedModules
-		if modules then
-			for i = 1, #modules do
-				self:EnableAddon(modules[i])
-			end
+		for i = 1, #modules do
+			self:EnableAddon(modules[i])
 		end
 	end
 	return self.statuses[addon.name] -- return true if we're disabled
@@ -649,29 +629,17 @@ function AceAddon:IterateAddonStatus() return pairs(self.statuses) end
 function AceAddon:IterateEmbedsOnAddon(addon) return pairs(self.embeds[addon]) end
 function AceAddon:IterateModulesOfAddon(addon) return pairs(addon.modules) end
 
--- Blizzard AddOns which can load very early in the loading process and mess with Ace3 addon loading
-local BlizzardEarlyLoadAddons = {
-	Blizzard_DebugTools = true,
-	Blizzard_TimeManager = true,
-	Blizzard_BattlefieldMap = true,
-	Blizzard_MapCanvas = true,
-	Blizzard_SharedMapDataProviders = true,
-	Blizzard_CombatLog = true,
-}
-
 -- Event Handling
 local function onEvent(this, event, arg1)
-	-- 2020-08-28 nevcairiel - ignore the load event of Blizzard addons which occur early in the loading process
-	if (event == "ADDON_LOADED"  and (arg1 == nil or not BlizzardEarlyLoadAddons[arg1])) or event == "PLAYER_LOGIN" then
+	-- 2011-08-17 nevcairiel - ignore the load event of Blizzard_DebugTools, so a potential startup error isn't swallowed up
+	if (event == "ADDON_LOADED"  and arg1 ~= "Blizzard_DebugTools") or event == "PLAYER_LOGIN" then
 		-- if a addon loads another addon, recursion could happen here, so we need to validate the table on every iteration
 		while(#AceAddon.initializequeue > 0) do
 			local addon = tremove(AceAddon.initializequeue, 1)
-			if addon then
-				-- this might be an issue with recursion - TODO: validate
-				if event == "ADDON_LOADED" then addon.baseName = arg1 end
-				AceAddon:InitializeAddon(addon)
-				tinsert(AceAddon.enablequeue, addon)
-			end
+			-- this might be an issue with recursion - TODO: validate
+			if event == "ADDON_LOADED" then addon.baseName = arg1 end
+			AceAddon:InitializeAddon(addon)
+			tinsert(AceAddon.enablequeue, addon)
 		end
 
 		if IsLoggedIn() then
