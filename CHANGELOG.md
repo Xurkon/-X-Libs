@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10] - 2026-04-11
+### Fixed
+- **oUF Library Registration**: X-Libs now correctly registers `oUF` via `LibStub:AddLib("oUF", nil, ns.oUF, minor)` in `oUF/init.lua` `finalize.lua`. This ensures ElvUI and its plugins can locate oUF through `LibStub("oUF")` instead of relying on the global `_G.oUF`.
+- **ElvUI oUF Integration Fix**: Changed `Engine.oUF = Engine[2]` (empty table) in ElvUI `Init.lua` to first check if `oUF` is already registered via `LibStub:GetLibrary("oUF", true)`, and fall back to `_G.oUF`. This allows X-Libs' oUF (with `oUF.Tags`, `oUF.colors`, and all elements) to be used by ElvUI instead of an empty table.
+
 ## [1.9] - 2026-04-05
 ### Added
 - **Forced Library Seniority**: Escalated `MINOR` versioning to **1,000,000** for all core Ace3 and shared libraries to ensure absolute priority over bundled addon dependencies.
