@@ -40,7 +40,6 @@ local string_len = string.len
 local string_sub = string.sub
 local unpack = unpack
 local pairs = pairs
-local math_modf = math.modf
 local bit_band = bit.band
 local bit_bor = bit.bor
 local bit_bxor = bit.bxor
@@ -56,7 +55,7 @@ local tables_to_clean = {} -- list of tables by name (string) that may be reset 
 
 -- tables that may be erased
 local function cleanup()
-	for k,v in pairs(tables_to_clean) do
+	for k in pairs(tables_to_clean) do
 		tables[k] = {}
 		tables_to_clean[k] = nil
 	end
@@ -462,7 +461,7 @@ function LibCompress:CompressHuffman(uncompressed)
 	compressed_size = 5
 
 	-- create symbol/code map
-	local escaped_code, escaped_code_len, success, msg
+	local escaped_code, escaped_code_len
 	for symbol, leaf in pairs(symbols) do
 		addBits(compressed, symbol, 8)
 		escaped_code, escaped_code_len = escape_code(leaf.bcode, leaf.blength)

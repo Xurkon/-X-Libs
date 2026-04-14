@@ -1,6 +1,6 @@
 --[[
 LibDualSpec-1.0 - Adds dual spec support to individual AceDB-3.0 databases
-Copyright (C) 2009-2012 Adirelle
+Copyright (C) 2009 Adirelle
 
 All rights reserved.
 
@@ -31,27 +31,21 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --]]
 
-local MAJOR, MINOR = "LibDualSpec-1.0", 12
+local MAJOR, MINOR = "LibDualSpec-1.0", 4
 assert(LibStub, MAJOR.." requires LibStub")
-local lib, minor = LibStub:NewLibrary(MAJOR, MINOR)
+local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 
 -- ----------------------------------------------------------------------------
 -- Library data
 -- ----------------------------------------------------------------------------
 
+lib.talentGroup = lib.talentGroup or GetActiveTalentGroup()
 lib.eventFrame = lib.eventFrame or CreateFrame("Frame")
 
 lib.registry = lib.registry or {}
 lib.options = lib.options or {}
 lib.mixin = lib.mixin or {}
-
--- Rename .talent* to .spec*
-if minor and minor < 11 then
-	lib.specLoaded = lib.talentsLoaded
-	lib.specGroup = lib.talentGroup
-	lib.talentsLoaded, lib.talentGroup = nil, nil
-end
 
 -- ----------------------------------------------------------------------------
 -- Locals
@@ -64,13 +58,6 @@ local mixin = lib.mixin
 -- "Externals"
 local AceDB3 = LibStub('AceDB-3.0', true)
 local AceDBOptions3 = LibStub('AceDBOptions-3.0', true)
-
--- ----------------------------------------------------------------------------
--- MoP compatibility
--- ----------------------------------------------------------------------------
-
-local GetActiveSpecGroup = GetActiveSpecGroup or GetActiveTalentGroup
-local GetNumSpecGroups = GetNumSpecGroups or GetNumTalentGroups
 
 -- ----------------------------------------------------------------------------
 -- Localization
@@ -101,11 +88,11 @@ do
 		L_ENABLED = "Aktiviere Duale Profile"
 		L_ENABLED_DESC = "Aktiviere diese Option, um beim Talentwechsel automatisch zwischen den Profilen zu wechseln."
 	elseif locale == "koKR" then
-		L_DUALSPEC_DESC = "이중 특성에 의하여 다른 프로필을 선택할 수 있게 합니다. 이중 프로필은 현재 프로필과 번갈아서 특성이 변경될 때 같이 적용됩니다."
-		L_DUAL_PROFILE = "이중 프로필"
-		L_DUAL_PROFILE_DESC = "특성이 바뀔 때 프로필을 선택합니다."
+		L_DUALSPEC_DESC = "|n전문화 변경 시 현재 프로필을 첫 번째 전문화 때에, 여기서 설정하는 프로필을 두 번째 전문화 때에 적용시킵니다.|n전문화별로 설정을 다르게 하고 싶을 때 아주 유용합니다."
+		L_DUAL_PROFILE = "두번째 전문화 때 프로필"
+		L_DUAL_PROFILE_DESC = "두번째 전문화 때 적용할 프로필을 선택하세요."
 		L_ENABLED = "이중 프로필 사용"
-		L_ENABLED_DESC = "특성이 변경 될때 자동으로 프로필을 변경하도록 선택합니다."
+		L_ENABLED_DESC = "전문화에 따라 다른 프로필을 적용시킵니다."
 	elseif locale == "ruRU" then
 		L_DUALSPEC_DESC = "Двойной профиль позволяет вам выбрать различные профили для каждой раскладки талантов. Профили будут переключаться каждый раз, когда вы переключаете раскладку талантов."
 		L_DUAL_PROFILE = "Второй профиль"
@@ -149,8 +136,8 @@ end
 -- @name enhancedDB:SetDualSpecEnabled
 function mixin:SetDualSpecEnabled(enabled)
 	local db = registry[self].db
-	if enabled and not db.char.specGroup then
-		db.char.specGroup = lib.specGroup
+	if enabled and not db.char.talentGroup then
+		db.char.talentGroup = lib.talentGroup
 		db.char.profile = self:GetCurrentProfile()
 		db.char.enabled = true
 	else
@@ -184,10 +171,10 @@ end
 -- @name enhancedDB:CheckDualSpecState
 function mixin:CheckDualSpecState()
 	local db = registry[self].db
-	if lib.specLoaded and db.char.enabled and db.char.specGroup ~= lib.specGroup then
+	if db.char.enabled and db.char.talentGroup ~= lib.talentGroup then
 		local currentProfile = self:GetCurrentProfile()
 		local newProfile = db.char.profile
-		db.char.specGroup = lib.specGroup
+		db.char.talentGroup = lib.talentGroup
 		if newProfile ~= currentProfile then
 			db.char.profile = currentProfile
 			self:SetProfile(newProfile)
@@ -246,7 +233,7 @@ end
 -- ----------------------------------------------------------------------------
 
 local function NoDualSpec()
-	return GetNumSpecGroups() == 1
+	return GetNumTalentGroups() == 1
 end
 
 options.dualSpecDesc = {
@@ -330,27 +317,12 @@ end
 -- ----------------------------------------------------------------------------
 
 lib.eventFrame:RegisterEvent('PLAYER_TALENT_UPDATE')
-if not lib.specLoaded then
-	lib.eventFrame:RegisterEvent('ADDON_LOADED')
-end
-lib.eventFrame:SetScript('OnEvent', function(_, event)
-	-- Before the first PLAYER_TALENT_UPDATE, GetActiveSpecGroup() always returns 1.
-	-- However, when LDS is loaded on demand, we cannot afford to wait for a PLAYER_TALENT_UPDATE.
-	-- So we wait either for any PLAYER_TALENT_UPDATE or for an ADDON_LOADED when IsLoggedIn() yields true.
-	if event == 'ADDON_LOADED' and not IsLoggedIn() then
-		return
-	end
-	if not lib.specLoaded then
-		lib.specLoaded = true
-		lib.eventFrame:UnregisterEvent('ADDON_LOADED')
-	end
-	local newSpecGroup = GetActiveSpecGroup()
-	if lib.specGroup ~= newSpecGroup then
-		lib.specGroup = newSpecGroup
+lib.eventFrame:SetScript('OnEvent', function()
+	local newTalentGroup = GetActiveTalentGroup()
+	if lib.talentGroup ~= newTalentGroup then
+		lib.talentGroup = newTalentGroup
 		for target in pairs(registry) do
 			target:CheckDualSpecState()
 		end
 	end
 end)
-
-

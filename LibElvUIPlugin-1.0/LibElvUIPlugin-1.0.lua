@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibElvUIPlugin-1.0", 1000031
+local MAJOR, MINOR = "LibElvUIPlugin-1.0", 31
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 -- GLOBALS: ElvUI
@@ -96,13 +96,51 @@ end
 local E
 local function checkElvUI()
 	if not E then
-		E = _G.ElvUI and _G.ElvUI[1]
+		E = ElvUI[1]
+		assert(E, "ElvUI not found.")
 	end
-	return E
+end
+
+-- ElvUI Core Shim: Polyfill missing E.* tables that plugins expect.
+-- ElvUI_Enhanced and other plugins access E.valueColorUpdateFuncs and E:ValueFuncCall()
+-- directly at load time, before ElvUI's Core has fully initialized.
+-- This shim ensures those tables exist so plugins don't get nil-indexing errors.
+do
+	print("|cff00d2ff[ElvUI LibElvUIPlugin-1.0] Shim block running, E = "..tostring(E))
+	local function ValueFuncCall(hex, ...)
+		if E.valueColorUpdateFuncs then
+			for func in pairs(E.valueColorUpdateFuncs) do
+				func(hex, unpack(E.rgbvaluecolor or {1, 1, 1}))
+			end
+		end
+	end
+
+	if checkElvUI() then
+		E.valueColorUpdateFuncs = E.valueColorUpdateFuncs or {}
+		E.TexCoords = E.TexCoords or {0, 1, 0, 1}
+		E.VehicleLocks = E.VehicleLocks or {}
+		E.CreditsList = E.CreditsList or {}
+		E.statusBars = E.statusBars or {}
+		E.texts = E.texts or {}
+		E.snapBars = E.snapBars or {}
+		E.RegisteredModules = E.RegisteredModules or {}
+		E.RegisteredInitialModules = E.RegisteredInitialModules or {}
+		E.ModuleCallbacks = E.ModuleCallbacks or {["CallPriority"] = {}}
+		E.InitialModuleCallbacks = E.InitialModuleCallbacks or {["CallPriority"] = {}}
+		E.InversePoints = E.InversePoints or {
+			TOP = "BOTTOM", BOTTOM = "TOP",
+			LEFT = "RIGHT", RIGHT = "LEFT",
+			TOPLEFT = "BOTTOMRIGHT", TOPRIGHT = "BOTTOMLEFT",
+			BOTTOMLEFT = "TOPRIGHT", BOTTOMRIGHT = "TOPLEFT",
+			CENTER = "CENTER"
+		}
+		E.ValueFuncCall = E.ValueFuncCall or ValueFuncCall
+		print("|cff00d2ff[ElvUI LibElvUIPlugin-1.0] E.valueColorUpdateFuncs = "..tostring(E.valueColorUpdateFuncs))
+	end
 end
 
 function lib:RegisterPlugin(name, callback, isLib, libVersion)
-	if not checkElvUI() then return end
+	checkElvUI()
 
 	local plugin = {
 		name = name,
@@ -147,19 +185,19 @@ local function SendVersionCheckMessage()
 end
 
 function lib:DelayedSendVersionCheck(delay)
-	if not checkElvUI() then return end
 	if not E.SendPluginVersionCheck then
 		E.SendPluginVersionCheck = SendVersionCheckMessage
 	end
 
 	if not lib.SendMessageWaiting then
-		lib.SendMessageWaiting = E:Delay(delay or 10, E.SendPluginVersionCheck)
+		if E.Delay and type(E.Delay) == "function" then
+			lib.SendMessageWaiting = E:Delay(delay or 10, E.SendPluginVersionCheck)
+		end
 	end
 end
 
 function lib:OptionsUILoaded(_, addon)
 	if addon == "ElvUI_OptionsUI" then
-		if not checkElvUI() then return end
 		lib:GetPluginOptions()
 
 		for _, plugin in pairs(lib.plugins) do
@@ -183,7 +221,6 @@ function lib:GenerateVersionCheckMessage()
 end
 
 function lib:GetPluginOptions()
-	if not checkElvUI() then return end
 	E.Options.args.plugins = {
 		order = -10,
 		type = "group",
@@ -214,7 +251,6 @@ end
 
 function lib:VersionCheck(event, prefix, message, _, sender)
 	if (event == "CHAT_MSG_ADDON" and prefix == lib.prefix) and (sender and message and not match(message, "^%s-$")) then
-		if not checkElvUI() then return end
 		if sender == E.myname then return end
 
 		if not E.pluginRecievedOutOfDateMessage then
@@ -250,7 +286,6 @@ function lib:GeneratePluginList()
 	local list = ""
 	for _, plugin in pairs(lib.plugins) do
 		if plugin.name ~= MAJOR then
-			if not checkElvUI() then return list end
 			local author = GetAddOnMetadata(plugin.name, "Author")
 			local title = GetAddOnMetadata(plugin.name, "Title") or plugin.name
 			local color = (plugin.old and E:RGBToHex(1, 0, 0)) or E:RGBToHex(0, 1, 0)
@@ -290,7 +325,6 @@ function lib:SendPluginVersionCheck(message)
 	local maxChar, msgLength = 254 - len(lib.prefix), len(message)
 	if msgLength > maxChar then
 		local delay, splitMessage = 0
-		if not checkElvUI() then return end
 
 		for _ = 1, ceil(msgLength / maxChar) do
 			splitMessage = match(sub(message, 1, maxChar), ".+;")
@@ -322,35 +356,16 @@ function lib:HookInitialize(tbl, func)
 	if not (tbl and func) then return end
 
 	if type(func) == "string" then
-		func = tbl and tbl[func]
+		func = tbl[func]
 	end
-
-	if not func then return end
 
 	if not self.inits then
 		self.inits = {}
-		local E_internal = checkElvUI()
-		if E_internal then
-			hooksecurefunc(E_internal, "Initialize", self.Initialized)
-		else
-			-- If ElvUI is not loaded yet, wait for its ADDON_LOADED event
-			if not self.WaitForElvUI then
-				self.WaitForElvUI = CreateFrame("Frame")
-				self.WaitForElvUI:RegisterEvent("ADDON_LOADED")
-				self.WaitForElvUI:SetScript("OnEvent", function(sf, ev, addon)
-					if addon == "ElvUI" then
-						local E_found = checkElvUI()
-						if E_found then
-							hooksecurefunc(E_found, "Initialize", self.Initialized)
-						end
-						sf:UnregisterEvent("ADDON_LOADED")
-					end
-				end)
-			end
-		end
+		checkElvUI()
+		hooksecurefunc(E, "Initialize", self.Initialized)
 	end
 
-	tinsert(self.inits, {tbl, func})
+	tinsert(lib.inits, {tbl, func})
 end
 
 lib.VCFrame = CreateFrame("Frame")

@@ -1,8 +1,9 @@
 ## Interface: 110005, 110002, 110000, 40400, 30403, 30300, 11504
-## Title: X-Libs
+## Title: 000-X-Libs
 ## Notes: Universal shared libraries for all addons - works on Vanilla, TBC, WotLK, Cata, MoP, and Retail
 ## Author: X-Plore
 ## Version: 1.5
+## X-oUF: ElvUF
 ## LoadOnDemand: 0
 
 # Compatibility layer - MUST load first
@@ -10,4 +11,5 @@
 Compat-335.lua
 
 # Library manifest (loads all libraries in correct order)
+LibStub.lua
 Libs.xml

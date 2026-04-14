@@ -3,13 +3,14 @@
 	___XLIB_TIMESTAMP_START = debugprofilestop()
 	</Script>
 
+	<!-- Global shims (BackdropTemplate, etc.) -->
+	<Include file="GlobalCompat.xml"/>
+
 	<!-- Compatibility layers - MUST load before libraries -->
 	<Script file="Compat-Lua.lua"/>
 	<Script file="Compat-335.lua"/>
 
-	<!-- LibStub - Library version negotiation -->
-	<Script file="LibStub\LibStub.lua"/>
-
+	<!-- LibStub is loaded by the TOC first, then registered libraries follow -->
 	<!-- CallbackHandler - Event callback management -->
 	<Include file="CallbackHandler-1.0\CallbackHandler-1.0.xml"/>
 

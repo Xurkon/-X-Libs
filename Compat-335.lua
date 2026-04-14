@@ -47,23 +47,42 @@ end
 -- BackdropTemplate shim for WotLK
 -- AceGUI-3.0 and other libs use "BackdropTemplate" which doesn't exist in WotLK
 -----------------------------------------------------------------------
-if not BackdropTemplate then
-	BackdropTemplate = {}
-end
-
 -----------------------------------------------------------------------
 -- BackdropTemplate shim for WotLK
 -- AceGUI-3.0 and other libs use "BackdropTemplate" which doesn't exist in WotLK
 -----------------------------------------------------------------------
 if not BackdropTemplate then
-	BackdropTemplate = {}
+	_G.BackdropTemplate = {}
 end
 
--- CreateFrame wrapper removed because dynamically altering _G.CreateFrame taints ALL frames
--- created by addons, entirely breaking standard Blizzard macro usage and secure action bindings.
+-- Redefine CreateFrame to catch 'BackdropTemplate' and redirect it to our virtual shim.
+-- We only do this on WotLK (isWOTLK guard at top of file) so Retail remains untouched.
+local originalCreateFrame = _G.CreateFrame
+_G.CreateFrame = function(frameType, name, parent, template)
+	if template and type(template) == "string" and template:find("BackdropTemplate") then
+		template = template:gsub("BackdropTemplate", "XLIB_BackdropTemplate")
+		-- Fail-safe: collapse double accidental prefixing
+		template = template:gsub("XLIB_XLIB_BackdropTemplate", "XLIB_BackdropTemplate")
+	end
+	return originalCreateFrame(frameType, name, parent, template)
+end
 
--- Instead of redefining CreateFrame to strip BackdropTemplate, we expect addons like AceGUI
--- to correctly feature-detect BackdropTemplateMixin and fallback correctly, which AceGUI already does.
+-- SetShown polyfill for 3.3.5a (WotLK) frames
+-- This is a retail-port convenience method.
+local function PatchSetShown(obj)
+	local mt = getmetatable(obj).__index
+	if not mt.SetShown then
+		mt.SetShown = function(self, show)
+			if show then self:Show() else self:Hide() end
+		end
+	end
+end
+
+local f = originalCreateFrame("Frame")
+PatchSetShown(f)
+PatchSetShown(f:CreateTexture())
+PatchSetShown(f:CreateFontString())
+f:Hide()
 
 
 -- This file MUST be loaded FIRST, before any other addon code.
@@ -584,7 +603,12 @@ if not C_Timer then
 			if t.timeLeft <= 0 then
 				local callback = t.callback
 				table.remove(timers, i)
-				callback()
+				if type(callback) == "function" then
+					local ok, err = pcall(callback)
+					if not ok and DEFAULT_CHAT_FRAME then
+						DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Compat-335 C_Timer error:|r " .. tostring(err))
+					end
+				end
 			end
 		end
 	end)
