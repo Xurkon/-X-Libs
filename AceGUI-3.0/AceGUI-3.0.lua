@@ -164,6 +164,12 @@ end
 
 -- Gets a widget Object
 
+-- Creates a frame with the standard BackdropTemplate applied.
+-- Provided for compatibility with addons that expect CreateFrame to always have BackdropTemplate.
+function AceGUI.CreateFrameWithBG(type, name, parent, templates)
+	return CreateFrame(type, name, parent, templates or "BackdropTemplate")
+end
+
 --- Create a new Widget of the given type.
 -- This function will instantiate a new widget (or use one from the widget pool), and call the
 -- OnAcquire function on it, before returning.
@@ -239,10 +245,23 @@ function AceGUI:Release(widget)
 	delWidget(widget, widget.type)
 end
 
+-- Checks if a widget is currently queued for release or is being released.
+-- Used by addons to detect if a widget is in the process of being destroyed.
+function AceGUI:IsReleasing(widget)
+	if widget.isQueuedForRelease then
+		return true
+	end
+
+	if widget.parent and widget.parent.AceGUIWidgetVersion then
+		return AceGUI:IsReleasing(widget.parent)
+	end
+
+	return false
+end
+
 -----------
 -- Focus --
 -----------
-
 
 --- Called when a widget has taken focus.
 -- e.g. Dropdowns opening, Editboxes gaining kb focus
