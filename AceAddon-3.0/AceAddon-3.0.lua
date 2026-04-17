@@ -480,7 +480,9 @@ local function IterateEmbeds(self) return pairs(AceAddon.embeds[self]) end
 local function IsEnabled(self) return self.enabledState end
 local mixins = {
 	NewModule = NewModule,
-	RegisterModule = NewModule, -- Ace2 compat alias
+	-- RegisterModule intentionally omitted — ElvUI addons define E:RegisterModule(name, func)
+	-- which conflicts with AceAddon's NewModule signature. The Ace2 compat RegisterModule = NewModule
+	-- alias (removed in fix) broke ElvUI_Enhanced's deferred module registration pattern.
 	GetModule = GetModule,
 	Enable = Enable,
 	Disable = Disable,

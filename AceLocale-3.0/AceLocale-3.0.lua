@@ -6,7 +6,15 @@ local MAJOR, MINOR = "AceLocale-3.0", 6
 
 local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
-if not AceLocale then return end -- no upgrade needed
+-- If an existing AceLocale with higher minor already exists (e.g. ElvUI's embedded copy at minor=8
+-- loaded before X-Libs), AceLocale will be nil and we must return early to avoid corrupting it.
+-- But we still need to register the -ElvUI alias for third-party addons that request it.
+if not AceLocale then
+	-- AceLocale table already exists in LibStub at a higher minor version (loaded by another library).
+	-- Register -ElvUI alias pointing to the existing table so third-party addons can find it.
+	LibStub:NewLibrary("AceLocale-3.0-ElvUI", oldminor)
+	return
+end
 
 -- Lua APIs
 local assert, tostring, error = assert, tostring, error
@@ -133,4 +141,8 @@ function AceLocale:GetLocale(application, silent)
 end
 
 -- Register as ElvUI specialty version
+-- Use LibStub directly to avoid early return from NewLibrary check.
+-- This ensures AceLocale-3.0-ElvUI always gets registered regardless of load order.
+-- If AceLocale-3.0 is already loaded (e.g. ElvUI's embedded copy at minor=8),
+-- we get that existing table; if not yet loaded, we create a new one.
 LibStub:NewLibrary("AceLocale-3.0-ElvUI", MINOR)
