@@ -30,7 +30,7 @@ local tostring=tostring --Getting a nil value sometimes. Localizing to see if it
 
 -- GLOBAL EasyFork,Spoo,UIDropDownFork_SetAnchor,UIDropDownFork_SetWidth
 -- GLOBAL LibRover_Node,LibRover_NodeSet,LibRover_NodeSetHeap,LibRover_Region
--- GLOBAL LibRoverFrame,XPlore,XPlorePointerOverlay
+-- GLOBAL LibRoverFrame,ZygorGuidesViewer,ZygorGuidesViewerPointerOverlay
 -- GLOBAL DEBUG_MATCHING
 -- removed, unused:
 -- GLOBAL SetMapByID,SetMapToCurrentZone
@@ -458,7 +458,7 @@ function Lib.zone_same_eastern_part(map1,map2)
 end
 
 function Lib:UpdateConfig()
-	local travelmode = XP.db.global.travelmode
+	local travelmode = ZGV.db.global.travelmode
 	local profile = XP.db.profile
 
 	if Lib.extradata then Lib.extradata.direct=nil end
@@ -5185,7 +5185,7 @@ function Lib.ShowDebugMenu(parent,but)
 	if not Lib.debugmenu then Lib.debugmenu = CreateFrame("FRAME","LibRoverDebugMenu",nil,"UIDropDownForkTemplate") end
 	UIDropDownFork_SetAnchor(Lib.debugmenu, 0, 0, "TOP", parent, "BOTTOM")
 
-	if not Lib.debug_overlayrect then Lib.debug_overlayrect = XP.ChainCall(XPlorePointerOverlay:CreateTexture()):SetColorTexture(0,1,0,0.5).__END end
+	if not Lib.debug_overlayrect then Lib.debug_overlayrect = XP.ChainCall(ZygorGuidesViewerPointerOverlay:CreateTexture()):SetColorTexture(0,1,0,0.5).__END end
 
 	local mapid = WorldMapFrame:GetMapID()
 	local subzones_src = C_Map.GetMapChildrenInfo(mapid,nil)

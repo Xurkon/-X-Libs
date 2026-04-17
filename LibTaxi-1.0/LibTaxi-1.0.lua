@@ -4,14 +4,14 @@ Revision: $Rev: 1 $
 Author(s): sinus (sinus@sinpi.net)
 Description: A library recording all player's currently known/unknown taxi routes. Currently relies on XPlore for some routines, and not ready for standalone usage.
 Dependencies: None
-License: Free for non-commercial use, except for XPlore Guides.
+License: Free for non-commercial use, except for Zygor Guides.
 ]]
 
 local addonname,addon = ...
 -- #AUTODOC_NAMESPACE prototype
 
 -- GLOBAL Spoo
-local XP,LibRover
+local ZGV,LibRover
 
 local hooksecurefunc, UnitLevel, IsControlKeyDown, GetTime, CreateFrame, IsShiftKeyDown, GetMinimapZoneText, UnitGUID
     = hooksecurefunc, UnitLevel, IsControlKeyDown, GetTime, CreateFrame, IsShiftKeyDown, GetMinimapZoneText, UnitGUID
@@ -78,14 +78,10 @@ do
 	Lib.path2cont = {}
 
 	---@type {[number]:{[string]:TaxiNode[]}}
-	if not Lib.taxipoints and addon and addon.LibTaxiData then
-		Lib.taxipoints = addon.LibTaxiData.taxipoints
-	end
+	Lib.taxipoints = Lib.taxipoints or addon.LibTaxiData and addon.LibTaxiData.taxipoints
 
 	---@type {[number]:{tag:string,nodeID:number,name:string,comment:string?,faction:string?,taxioperator:TaxiOperator?,neighbors:{[number]:number}}[]}
-	if not Lib.flightcost and addon and addon.LibTaxiData then
-		Lib.flightcost = addon.LibTaxiData.flightcost
-	end
+	Lib.flightcost = Lib.flightcost or addon.LibTaxiData and addon.LibTaxiData.flightcost
 
 	addon.LibTaxiData = nil
 
@@ -144,9 +140,9 @@ do
 
 	local initialized_continents={}
 	function Lib:Startup(newsave)
-		XP = addon
-		LibRover = XP.LibRover
-
+		ZGV = addon
+		LibRover = ZGV.LibRover
+		Lib.MapIDsByName = LibRover.data.MapIDsByName or ZGV.MapIDsByName
 		Lib.frame = CreateFrame("Frame", "LibTaxiFrame")
 		Lib.frame:RegisterEvent("TAXIMAP_OPENED")
 		Lib.frame:RegisterEvent("UI_INFO_MESSAGE")
@@ -161,8 +157,6 @@ do
 		if C_EventUtils.IsEventValid("DISPLAY_EVENT_TOAST_LINK") then Lib.frame:RegisterEvent("DISPLAY_EVENT_TOAST_LINK") end
 
 		Lib.frame:SetScript("OnEvent", Lib.OnEvent)
-
-		Lib.MapIDsByName = LibRover.data.MapIDsByName or XP.MapIDsByName
 
 		Lib.master=newsave
 

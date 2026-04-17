@@ -45,6 +45,10 @@ end
 local pins, oldversion = LibStub:NewLibrary(MAJOR, MINOR)
 if not pins then return end
 
+-- Zygor alias
+LibStub.minors["HereBeDragons-Pins-ZGV"] = 15
+LibStub.libs["HereBeDragons-Pins-ZGV"] = pins
+
 local HBD = LibStub("HereBeDragons-2.0")
 
 local MinimapRadiusAPI = C_Minimap and C_Minimap.GetViewRadius

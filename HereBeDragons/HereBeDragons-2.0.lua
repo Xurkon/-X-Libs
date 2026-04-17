@@ -1,10 +1,13 @@
 -- HereBeDragons is a data API for the World of Warcraft mapping system
-
 local MAJOR, MINOR = "HereBeDragons-2.0", 99
 assert(LibStub, MAJOR .. " requires LibStub")
 
 local HereBeDragons, oldversion = LibStub:NewLibrary(MAJOR, MINOR)
 if not HereBeDragons then return end
+
+-- Zygor alias: register HereBeDragons-ZGV pointing to same table
+LibStub.minors["HereBeDragons-ZGV"] = 30
+LibStub.libs["HereBeDragons-ZGV"] = HereBeDragons
 
 local CBH = LibStub("CallbackHandler-1.0")
 

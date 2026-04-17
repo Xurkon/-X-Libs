@@ -1,0 +1,5 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+	<!-- Libraries provided by X-Libs - ElvUI's embedded copies removed -->
+	<Include file="oUF\oUF.xml"/>
+	<Include file="oUF_Plugins\oUF_Plugins.xml"/>
+</Ui>
