@@ -480,6 +480,7 @@ local function IterateEmbeds(self) return pairs(AceAddon.embeds[self]) end
 local function IsEnabled(self) return self.enabledState end
 local mixins = {
 	NewModule = NewModule,
+	RegisterModule = NewModule, -- Ace2 compat alias
 	GetModule = GetModule,
 	Enable = Enable,
 	Disable = Disable,
