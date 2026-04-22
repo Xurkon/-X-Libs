@@ -1,7 +1,7 @@
 --- **AceLocale-3.0** manages localization in addons, allowing for multiple locale to be registered with fallback to the base locale for untranslated strings.
 -- @class file
 -- @name AceLocale-3.0
--- @release $Id: AceLocale-3.0.lua 1284 2022-09-25 09:15:30Z nevcairiel $
+-- $Id: AceLocale-3.0.lua 1284 2022-09-25 09:15:30Z nevcairiel $
 local MAJOR, MINOR = "AceLocale-3.0", 6
 
 local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
@@ -9,7 +9,7 @@ local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 -- If an existing AceLocale with higher minor already exists (e.g. ElvUI's embedded copy at minor=8
 -- loaded before X-Libs), AceLocale will be nil and we must return early to avoid corrupting it.
 -- But we still need to register the -ElvUI alias for third-party addons that request it.
-	if not AceLocale then
+if not AceLocale then
 	-- AceLocale table already exists in LibStub at a higher minor version (loaded by another library).
 	-- Register -ElvUI alias pointing to the SAME existing table so third-party addons can find it.
 	local _, existingOldminor = LibStub:NewLibrary("AceLocale-3.0-ElvUI", oldminor)
@@ -123,7 +123,7 @@ function AceLocale:NewLocale(application, locale, isDefault, silent)
 		return -- nop, we don't need these translations
 	end
 
-	registering = app -- remember globally for writeproxy and writedefaultproxy
+	registering = app[locale] -- remember globally for writeproxy and writedefaultproxy
 
 	if isDefault then
 		return writedefaultproxy
@@ -135,13 +135,18 @@ end
 --- Returns localizations for the current locale (or default locale if translations are missing).
 -- Errors if nothing is registered (spank developer, not just a missing translation)
 -- @param application Unique name of addon / module
+-- @param locale Locale name (e.g. "enUS", "deDE"). Defaults to game locale.
 -- @param silent If true, the locale is optional, silently return nil if it's not found (defaults to false, optional)
 -- @return The locale table for the current language.
-function AceLocale:GetLocale(application, silent)
-	if not silent and not AceLocale.apps[application] then
-		error("Usage: GetLocale(application[, silent]): 'application' - No locales registered for '"..tostring(application).."'", 2)
+function AceLocale:GetLocale(application, locale, silent)
+	if type(locale) == "boolean" then
+		silent = locale
+		locale = gameLocale
 	end
-	return AceLocale.apps[application]
+	if not silent and not AceLocale.apps[application] then
+		error("Usage: GetLocale(application[, locale[, silent]]): 'application' - No locales registered for '"..tostring(application).."'", 2)
+	end
+	return AceLocale.apps[application] and AceLocale.apps[application][locale]
 end
 
 -- Register as ElvUI specialty version
