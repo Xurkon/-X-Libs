@@ -589,33 +589,6 @@ end
 -- from insecure addon code causes massive taint and breaks standard Blizz keybinds.
 
 
------------------------------------------------------------------------
--- C_Timer shim
------------------------------------------------------------------------
-if not C_Timer then
-	C_Timer = {}
-	local timerFrame = CreateFrame("Frame")
-	local timers = {}
-	timerFrame:SetScript("OnUpdate", function(self, elapsed)
-		for i = #timers, 1, -1 do
-			local t = timers[i]
-			t.timeLeft = t.timeLeft - elapsed
-			if t.timeLeft <= 0 then
-				local callback = t.callback
-				table.remove(timers, i)
-				if type(callback) == "function" then
-					local ok, err = pcall(callback)
-					if not ok and DEFAULT_CHAT_FRAME then
-						DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Compat-335 C_Timer error:|r " .. tostring(err))
-					end
-				end
-			end
-		end
-	end)
-	C_Timer.After = function(duration, callback)
-		table.insert(timers, { timeLeft = duration, callback = callback })
-	end
-end
 -- regardless of which private server expansion is running.
 -----------------------------------------------------------------------
 if not WOW_PROJECT_MAINLINE then WOW_PROJECT_MAINLINE = 1 end
@@ -1051,26 +1024,23 @@ if not C_Timer then
 	local timerFrame = CreateFrame("Frame")
 	timerFrame:Hide()
 	local timers = {}
-	local timerID = 0
 
 	timerFrame:SetScript("OnUpdate", function(self, elapsed)
-		local toRemove = {}
-		for id, timer in pairs(timers) do
+		for timer in pairs(timers) do
 			timer.remaining = timer.remaining - elapsed
 			if timer.remaining <= 0 then
 				local ok, err = pcall(timer.callback)
 				if not ok and DEFAULT_CHAT_FRAME then
 					DEFAULT_CHAT_FRAME:AddMessage("|cffff0000Compat-335 C_Timer error:|r " .. tostring(err))
 				end
-				if timer.isTicker then
-					timer.remaining = timer.duration
-				else
-					table.insert(toRemove, id)
+				if timers[timer] then
+					if timer.isTicker then
+						timer.remaining = timer.duration
+					else
+						timers[timer] = nil
+					end
 				end
 			end
-		end
-		for _, id in ipairs(toRemove) do
-			timers[id] = nil
 		end
 		if not next(timers) then
 			timerFrame:Hide()
@@ -1078,55 +1048,80 @@ if not C_Timer then
 	end)
 
 	C_Timer.After = function(duration, callback)
-		timerID = timerID + 1
-		timers[timerID] = {
+		if type(callback) ~= "function" then
+			return nil
+		end
+		duration = tonumber(duration) or 0
+		if duration < 0.01 then
+			duration = 0.01
+		end
+		local timer = {
 			remaining = duration,
 			duration = duration,
 			callback = callback,
 			isTicker = false,
 		}
+		timers[timer] = true
 		timerFrame:Show()
-		return timerID
+		return timer
 	end
 
 	C_Timer.NewTimer = function(duration, callback)
-		local id = C_Timer.After(duration, callback)
+		local timer = C_Timer.After(duration, callback)
+		if not timer then
+			return {
+				Cancel = function() end,
+				IsCancelled = function() return true end,
+			}
+		end
 		return {
 			Cancel = function(self)
-				timers[id] = nil
+				timers[timer] = nil
 			end,
 			IsCancelled = function(self)
-				return timers[id] == nil
+				return timers[timer] == nil
 			end,
 		}
 	end
 
 	C_Timer.NewTicker = function(duration, callback, iterations)
-		timerID = timerID + 1
-		local thisID = timerID
+		if type(callback) ~= "function" then
+			return nil
+		end
+		duration = tonumber(duration) or 0
+		if duration < 0.01 then
+			duration = 0.01
+		end
+		local timer = nil
 		local count = 0
-		timers[thisID] = {
+		timer = {
 			remaining = duration,
 			duration = duration,
 			callback = function()
 				count = count + 1
 				callback()
 				if iterations and count >= iterations then
-					timers[thisID] = nil
+					timers[timer] = nil
 				end
 			end,
 			isTicker = true,
 		}
+		timers[timer] = true
 		timerFrame:Show()
 		return {
 			Cancel = function(self)
-				timers[thisID] = nil
+				timers[timer] = nil
 			end,
 			IsCancelled = function(self)
-				return timers[thisID] == nil
+				return timers[timer] == nil
 			end,
 		}
 	end
+
+	-- Make C_Timer(delay, cb) work as an alias for C_Timer.After(delay, cb)
+	setmetatable(C_Timer, { __call = function(_, duration, callback)
+		C_Timer.After(duration, callback)
+	end })
 end
 
 -----------------------------------------------------------------------
@@ -2413,4 +2408,3 @@ if LibStub_G then
 		end
 	end
 end
-

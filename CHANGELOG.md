@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11] - 2026-04-19
+### Fixed
+- **Compat-335 Timer Consolidation**: Removed the duplicate early `C_Timer` shim so the later full implementation is the single active compatibility layer, preventing partial timer initialization where `After` existed but `NewTimer`/`NewTicker` could still be missing.
+- **Compat-335 Memory Pressure**: Reworked timer storage from ever-increasing numeric IDs to timer-object keys, which prevents the timer table from growing into a large sparse structure under heavy retry scheduling and resolves `memory allocation error: block too big` failures.
+- **Compat-335 Timer Validation**: Hardened `C_Timer.After` and `C_Timer.NewTicker` to ignore non-function callbacks and clamp very small delays to a safe minimum, reducing zero-delay retry storms from addon compatibility shims.
+- **Compat-335 Ticker Cancellation**: Fixed finite ticker shutdown so `NewTicker(..., iterations)` stops cleanly once the callback removes its timer instead of being re-armed by the same update tick.
+
 ## [1.10] - 2026-04-11
 ### Fixed
 - **oUF Library Registration**: X-Libs now correctly registers `oUF` via `LibStub:AddLib("oUF", nil, ns.oUF, minor)` in `oUF/init.lua` `finalize.lua`. This ensures ElvUI and its plugins can locate oUF through `LibStub("oUF")` instead of relying on the global `_G.oUF`.

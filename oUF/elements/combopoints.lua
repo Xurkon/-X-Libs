@@ -102,9 +102,9 @@ local function Enable(self)
 
 		for index = 1, MAX_COMBO_POINTS do
 			local cp = element[index]
-			if(cp:IsObjectType('Texture') and not cp:GetTexture()) then
-				cp:SetTexture([[Interface\ComboFrame\ComboPoint]])
-				cp:SetTexCoord(0, 0.375, 0, 1)
+			if(cp:IsObjectType('StatusBar') and not cp:GetStatusBarTexture()) then
+				cp:SetStatusBarTexture([[Interface\ComboFrame\ComboPoint]])
+				cp:GetStatusBarTexture():SetTexCoord(0, 0.375, 0, 1)
 			end
 		end
 

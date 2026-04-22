@@ -9,10 +9,14 @@ local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 -- If an existing AceLocale with higher minor already exists (e.g. ElvUI's embedded copy at minor=8
 -- loaded before X-Libs), AceLocale will be nil and we must return early to avoid corrupting it.
 -- But we still need to register the -ElvUI alias for third-party addons that request it.
-if not AceLocale then
+	if not AceLocale then
 	-- AceLocale table already exists in LibStub at a higher minor version (loaded by another library).
-	-- Register -ElvUI alias pointing to the existing table so third-party addons can find it.
-	LibStub:NewLibrary("AceLocale-3.0-ElvUI", oldminor)
+	-- Register -ElvUI alias pointing to the SAME existing table so third-party addons can find it.
+	local _, existingOldminor = LibStub:NewLibrary("AceLocale-3.0-ElvUI", oldminor)
+	-- LibStub:NewLibrary returns nil when oldminor >= new minor, so it doesn't update the -ElvUI entry.
+	-- Force-register by directly setting libs and minors so third-party addons get a valid reference.
+	LibStub.libs["AceLocale-3.0-ElvUI"] = LibStub.libs[MAJOR]
+	LibStub.minors["AceLocale-3.0-ElvUI"] = existingOldminor or LibStub.minors[MAJOR]
 	return
 end
 
@@ -32,7 +36,7 @@ AceLocale.appnames = AceLocale.appnames or {}  -- array of [localetableref]="App
 local readmeta = {
 	__index = function(self, key) -- requesting totally unknown entries: fire off a nonbreaking error and return key
 		rawset(self, key, key)      -- only need to see the warning once, really
-		geterrorhandler()(MAJOR..": "..tostring(AceLocale.appnames[self])..": Missing entry for '"..tostring(key).."')
+		geterrorhandler()(MAJOR..": "..tostring(AceLocale.appnames[self])..": Missing entry for '"..tostring(key).."')")
 		return key
 	end
 }

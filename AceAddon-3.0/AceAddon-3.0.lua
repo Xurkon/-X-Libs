@@ -238,8 +238,15 @@ end
 -- -- Get the Module
 -- MyModule = MyAddon:GetModule("MyModule")
 function GetModule(self, name, silent)
-	if not self.modules[name] and not silent then
-		error(("Usage: GetModule(name, silent): 'name' - Cannot find module '%s'."):format(tostring(name)), 2)
+	if not self.modules[name] then
+		-- Check parent addon (for modules calling GetModule on their parent)
+		if self.parentAddon and self.parentAddon.modules[name] then
+			return self.parentAddon.modules[name]
+		end
+		if not silent then
+			error(("Usage: GetModule(name, silent): 'name' - Cannot find module '%s'."):format(tostring(name)), 2)
+		end
+		return nil
 	end
 	return self.modules[name]
 end
@@ -275,6 +282,7 @@ function NewModule(self, name, prototype, ...)
 	module.IsModule = IsModuleTrue
 	module:SetEnabledState(self.defaultModuleState)
 	module.moduleName = name
+	module.parentAddon = self
 
 	if type(prototype) == "string" then
 		AceAddon:EmbedLibraries(module, prototype, ...)
@@ -480,9 +488,9 @@ local function IterateEmbeds(self) return pairs(AceAddon.embeds[self]) end
 local function IsEnabled(self) return self.enabledState end
 local mixins = {
 	NewModule = NewModule,
-	-- RegisterModule intentionally omitted — ElvUI addons define E:RegisterModule(name, func)
-	-- which conflicts with AceAddon's NewModule signature. The Ace2 compat RegisterModule = NewModule
-	-- alias (removed in fix) broke ElvUI_Enhanced's deferred module registration pattern.
+	-- RegisterModule intentionally omitted — ElvUI uses E:RegisterModule(name, func)
+	-- which conflicts with AceAddon's signature. ElvUI's version is registered
+	-- separately in Core.lua, so we don't want it mixed in from AceAddon.
 	GetModule = GetModule,
 	Enable = Enable,
 	Disable = Disable,
