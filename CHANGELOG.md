@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.11] - 2026-04-19
 ### Fixed
+- **AceLocale GetLocale API**: Fixed `GetLocale(application, locale, silent)` signature — `locale` was being silently dropped because the function only accepted `(application, silent)`. Now properly returns the locale-specific table from `AceLocale.apps[application][locale]` instead of the entire app table.
+- **AceLocale NewLocale registration**: Fixed `registering = app` (entire app) to `registering = app[locale]` so proxy writes go to the correct locale table.
+- **AceLocale early return path**: Fixed indentation of the early-return block so the `AceLocale-3.0-ElvUI` alias registration actually executes when a higher minor AceLocale already exists.
 - **Compat-335 Timer Consolidation**: Removed the duplicate early `C_Timer` shim so the later full implementation is the single active compatibility layer, preventing partial timer initialization where `After` existed but `NewTimer`/`NewTicker` could still be missing.
 - **Compat-335 Memory Pressure**: Reworked timer storage from ever-increasing numeric IDs to timer-object keys, which prevents the timer table from growing into a large sparse structure under heavy retry scheduling and resolves `memory allocation error: block too big` failures.
 - **Compat-335 Timer Validation**: Hardened `C_Timer.After` and `C_Timer.NewTicker` to ignore non-function callbacks and clamp very small delays to a safe minimum, reducing zero-delay retry storms from addon compatibility shims.
