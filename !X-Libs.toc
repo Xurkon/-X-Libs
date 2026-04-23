@@ -11,5 +11,5 @@
 Compat-335.lua
 
 # Library manifest (loads all libraries in correct order)
-LibStub.lua
+LibStub/LibStub.lua
 Libs.xml
