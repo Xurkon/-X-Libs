@@ -1,28 +1,20 @@
 --- **AceLocale-3.0** manages localization in addons, allowing for multiple locale to be registered with fallback to the base locale for untranslated strings.
 -- @class file
 -- @name AceLocale-3.0
--- $Id: AceLocale-3.0.lua 1284 2022-09-25 09:15:30Z nevcairiel $
-local MAJOR, MINOR = "AceLocale-3.0", 6
+-- @release $Id$
+local MAJOR,MINOR = "AceLocale-3.0-ElvUI", 6
 
 local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
--- If an existing AceLocale with higher minor already exists (e.g. ElvUI's embedded copy at minor=8
--- loaded before X-Libs), AceLocale will be nil and we must return early to avoid corrupting it.
--- But we still need to register the -ElvUI alias for third-party addons that request it.
-if not AceLocale then
-	-- AceLocale table already exists in LibStub at a higher minor version (loaded by another library).
-	-- Register -ElvUI alias pointing to the SAME existing table so third-party addons can find it.
-	local _, existingOldminor = LibStub:NewLibrary("AceLocale-3.0-ElvUI", oldminor)
-	-- LibStub:NewLibrary returns nil when oldminor >= new minor, so it doesn't update the -ElvUI entry.
-	-- Force-register by directly setting libs and minors so third-party addons get a valid reference.
-	LibStub.libs["AceLocale-3.0-ElvUI"] = LibStub.libs[MAJOR]
-	LibStub.minors["AceLocale-3.0-ElvUI"] = existingOldminor or LibStub.minors[MAJOR]
-	return
-end
+if not AceLocale then return end -- no upgrade needed
 
 -- Lua APIs
 local assert, tostring, error = assert, tostring, error
 local getmetatable, setmetatable, rawset, rawget = getmetatable, setmetatable, rawset, rawget
+
+-- Global vars/functions that we don't upvalue since they might get hooked, or upgraded
+-- List them here for Mikk's FindGlobals script
+-- GLOBALS: GAME_LOCALE, geterrorhandler
 
 local gameLocale = GetLocale()
 if gameLocale == "enGB" then
@@ -36,7 +28,7 @@ AceLocale.appnames = AceLocale.appnames or {}  -- array of [localetableref]="App
 local readmeta = {
 	__index = function(self, key) -- requesting totally unknown entries: fire off a nonbreaking error and return key
 		rawset(self, key, key)      -- only need to see the warning once, really
-		geterrorhandler()(MAJOR..": "..tostring(AceLocale.appnames[self])..": Missing entry for '"..tostring(key).."')")
+		geterrorhandler()(MAJOR..": "..tostring(AceLocale.appnames[self])..": Missing entry for '"..tostring(key).."'")
 		return key
 	end
 }
@@ -99,10 +91,6 @@ local writedefaultproxy = setmetatable({}, {
 -- L["string1"] = "Zeichenkette1"
 -- @return Locale Table to add localizations to, or nil if the current locale is not required.
 function AceLocale:NewLocale(application, locale, isDefault, silent)
-
-	-- GAME_LOCALE allows translators to test translations of addons without having that wow client installed
-	local activeGameLocale = GAME_LOCALE or gameLocale
-
 	local app = AceLocale.apps[application]
 
 	if silent and app and getmetatable(app) ~= readmetasilent then
@@ -119,11 +107,14 @@ function AceLocale:NewLocale(application, locale, isDefault, silent)
 		AceLocale.appnames[app] = application
 	end
 
-	if locale ~= activeGameLocale and not isDefault then
-		return -- nop, we don't need these translations
+	-- ElvUI block
+	if (not app[locale]) or (app[locale] and type(app[locale]) ~= 'table') then
+		--	app[locale] = setmetatable({}, silent and readmetasilent or readmeta) -- To find missing keys
+		app[locale] = setmetatable({}, readmetasilent)
 	end
 
 	registering = app[locale] -- remember globally for writeproxy and writedefaultproxy
+	-- end block
 
 	if isDefault then
 		return writedefaultproxy
@@ -135,23 +126,18 @@ end
 --- Returns localizations for the current locale (or default locale if translations are missing).
 -- Errors if nothing is registered (spank developer, not just a missing translation)
 -- @param application Unique name of addon / module
--- @param locale Locale name (e.g. "enUS", "deDE"). Defaults to game locale.
 -- @param silent If true, the locale is optional, silently return nil if it's not found (defaults to false, optional)
 -- @return The locale table for the current language.
+--- Modified by ElvUI to add `locale` as second arg
 function AceLocale:GetLocale(application, locale, silent)
 	if type(locale) == "boolean" then
 		silent = locale
 		locale = gameLocale
 	end
-	if not silent and not AceLocale.apps[application] then
-		error("Usage: GetLocale(application[, locale[, silent]]): 'application' - No locales registered for '"..tostring(application).."'", 2)
-	end
-	return AceLocale.apps[application] and AceLocale.apps[application][locale]
-end
 
--- Register as ElvUI specialty version
--- Use LibStub directly to avoid early return from NewLibrary check.
--- This ensures AceLocale-3.0-ElvUI always gets registered regardless of load order.
--- If AceLocale-3.0 is already loaded (e.g. ElvUI's embedded copy at minor=8),
--- we get that existing table; if not yet loaded, we create a new one.
-LibStub:NewLibrary("AceLocale-3.0-ElvUI", MINOR)
+	if not silent and not AceLocale.apps[application] then
+		error("Usage: GetLocale(application[,locale[, silent]]): 'application' - No locales registered for '"..tostring(application).."'", 2)
+	end
+
+	return AceLocale.apps[application][locale] or AceLocale.apps[application][gameLocale] -- Just in case the table doesn't exist it reverts to default
+end

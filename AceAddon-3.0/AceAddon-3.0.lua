@@ -23,14 +23,14 @@
 --
 -- function MyAddon:OnDisable()
 --   -- Unhook, Unregister Events, Hide frames that you created.
---   -- You would probably only have an OnDisable if you want to
+--   -- You would probably only use an OnDisable if you want to
 --   -- build a "standby" mode, or be able to toggle modules on/off.
 -- end
 -- @class file
 -- @name AceAddon-3.0.lua
--- @release $Id: AceAddon-3.0.lua 1284 2022-09-25 09:15:30Z nevcairiel $
+-- @release $Id$
 
-local MAJOR, MINOR = "AceAddon-3.0", 13
+local MAJOR, MINOR = "AceAddon-3.0", 12
 local AceAddon, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not AceAddon then return end -- No Upgrade needed.
@@ -107,6 +107,7 @@ local Enable, Disable, EnableModule, DisableModule, Embed, NewModule, GetModule,
 
 -- used in the addon metatable
 local function addontostring( self ) return self.name end
+
 -- Check if the addon is queued for initialization
 local function queuedForInitialization(addon)
 	for i = 1, #AceAddon.initializequeue do
@@ -222,7 +223,7 @@ function AceAddon:EmbedLibrary(addon, libname, silent, offset)
 		tinsert(self.embeds[addon], libname)
 		return true
 	elseif lib then
-		error(("Usage: EmbedLibrary(addon, libname, silent, offset): Library '%s' is not Embed capable"):format(libname), offset or 2)
+		error(("Usage: EmbedLibrary(addon, libname, silent, offset): 'libname' - Library '%s' is not Embed capable"):format(libname), offset or 2)
 	end
 end
 
@@ -238,15 +239,8 @@ end
 -- -- Get the Module
 -- MyModule = MyAddon:GetModule("MyModule")
 function GetModule(self, name, silent)
-	if not self.modules[name] then
-		-- Check parent addon (for modules calling GetModule on their parent)
-		if self.parentAddon and self.parentAddon.modules[name] then
-			return self.parentAddon.modules[name]
-		end
-		if not silent then
-			error(("Usage: GetModule(name, silent): 'name' - Cannot find module '%s'."):format(tostring(name)), 2)
-		end
-		return nil
+	if not self.modules[name] and not silent then
+		error(("Usage: GetModule(name, silent): 'name' - Cannot find module '%s'."):format(tostring(name)), 2)
 	end
 	return self.modules[name]
 end
@@ -282,7 +276,6 @@ function NewModule(self, name, prototype, ...)
 	module.IsModule = IsModuleTrue
 	module:SetEnabledState(self.defaultModuleState)
 	module.moduleName = name
-	module.parentAddon = self
 
 	if type(prototype) == "string" then
 		AceAddon:EmbedLibraries(module, prototype, ...)
@@ -304,6 +297,7 @@ function NewModule(self, name, prototype, ...)
 	safecall(self.OnModuleCreated, self, module) -- Was in Ace2 and I think it could be a cool thing to have handy.
 	self.modules[name] = module
 	tinsert(self.orderedModules, module)
+
 	return module
 end
 
@@ -488,9 +482,6 @@ local function IterateEmbeds(self) return pairs(AceAddon.embeds[self]) end
 local function IsEnabled(self) return self.enabledState end
 local mixins = {
 	NewModule = NewModule,
-	-- RegisterModule intentionally omitted — ElvUI uses E:RegisterModule(name, func)
-	-- which conflicts with AceAddon's signature. ElvUI's version is registered
-	-- separately in Core.lua, so we don't want it mixed in from AceAddon.
 	GetModule = GetModule,
 	Enable = Enable,
 	Disable = Disable,
@@ -525,6 +516,7 @@ function Embed(target, skipPMixins)
 		end
 	end
 end
+
 
 -- - Initialize the addon after creation.
 -- This function is only used internally during the ADDON_LOADED event
