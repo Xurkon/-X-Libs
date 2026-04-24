@@ -57,17 +57,20 @@ local UnitGUID = UnitGUID
 local UnitName = UnitName
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
-local UnitGetIncomingHeals = UnitGetIncomingHeals
+-- Do NOT upvalue UnitGetIncomingHeals — it may be nil at load time on older clients.
+-- Always check _G at call site for accurate availability.
 
--- Fallback sequence for HealComm
+-- Fallback sequence for HealComm (used when UnitGetIncomingHeals is unavailable)
 local HealComm
 local HealComm112
 
-if not UnitGetIncomingHeals then
+-- Resolve the best available heal prediction backend at load time.
+-- UnitGetIncomingHeals is Cataclysm+; WotLK private servers may not have it.
+if not _G.UnitGetIncomingHeals then
 	if LibStub then
 		HealComm = LibStub("LibHealComm-4.0", true)
 	end
-	
+
 	if not HealComm then
 		-- Fallback to Vanilla 1.12 HealComm
 		HealComm112 = _G.HealComm or (typeof and typeof(AceLibrary) == "table" and AceLibrary:HasInstance("HealComm-1.0") and AceLibrary("HealComm-1.0"))
@@ -92,9 +95,9 @@ local function Update(self)
 
 	local myIncomingHeal, allIncomingHeal = 0, 0
 
-	if UnitGetIncomingHeals then
-		myIncomingHeal = UnitGetIncomingHeals(unit, UnitName("player")) or 0
-		allIncomingHeal = UnitGetIncomingHeals(unit) or 0
+	if _G.UnitGetIncomingHeals then
+		myIncomingHeal = _G.UnitGetIncomingHeals(unit, UnitName("player")) or 0
+		allIncomingHeal = _G.UnitGetIncomingHeals(unit) or 0
 	elseif HealComm and UnitGUID then
 		local guid = UnitGUID(unit)
 		local timeFrame = self.HealCommTimeframe and GetTime() + self.HealCommTimeframe or nil
@@ -247,7 +250,7 @@ local function Enable(self)
 		self:RegisterEvent("UNIT_HEALTH", Path)
 		self:RegisterEvent("UNIT_MAXHEALTH", Path)
 
-		if UnitGetIncomingHeals then
+		if _G.UnitGetIncomingHeals then
 			self:RegisterEvent("UNIT_HEAL_PREDICTION", Path)
 		end
 
@@ -265,7 +268,7 @@ local function Enable(self)
 
 		enabledUF[#enabledUF + 1] = self
 		
-		if not UnitGetIncomingHeals then
+		if not _G.UnitGetIncomingHeals then
 			ToggleCallbacks(true)
 		end
 
@@ -288,7 +291,7 @@ local function Disable(self)
 		self:UnregisterEvent("UNIT_HEALTH", Path)
 		self:UnregisterEvent("UNIT_MAXHEALTH", Path)
 
-		if UnitGetIncomingHeals then
+		if _G.UnitGetIncomingHeals then
 			self:UnregisterEvent("UNIT_HEAL_PREDICTION", Path)
 		end
 
@@ -299,7 +302,7 @@ local function Disable(self)
 			end
 		end
 
-		if not UnitGetIncomingHeals then
+		if not _G.UnitGetIncomingHeals then
 			ToggleCallbacks(false)
 		end
 	end
