@@ -95,10 +95,10 @@ end
 
 local E
 local function checkElvUI()
-	if not E then
-		E = ElvUI[1]
-		assert(E, "ElvUI not found.")
+	if not E or (_G.ElvUI and E ~= _G.ElvUI[1]) then
+		E = _G.ElvUI and _G.ElvUI[1]
 	end
+	return E
 end
 
 -- ElvUI Core Shim: Polyfill missing E.* tables that plugins expect.
@@ -198,6 +198,7 @@ end
 
 function lib:OptionsUILoaded(_, addon)
 	if addon == "ElvUI_OptionsUI" then
+		checkElvUI()
 		lib:GetPluginOptions()
 
 		for _, plugin in pairs(lib.plugins) do
