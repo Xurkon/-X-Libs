@@ -13,10 +13,6 @@ local colors = {
 	health = {49 / 255, 207 / 255, 37 / 255},
 	disconnected = {.6, .6, .6},
 	tapped = {.6, .6, .6},
-	threshold_20 = {1, 0, 0},
-	threshold_35 = {1, 0, 0.8},
-	threshold_50 = {1, 0.5, 0},
-	threshold_75 = {1, 1, 0},
 	runes = {
 		{1, 0, 0}, -- blood
 		{0, 0.5, 0}, -- unholy
@@ -30,16 +26,48 @@ local colors = {
 	threat = {},
 }
 
-for classToken, color in next, RAID_CLASS_COLORS do
-	colors.class[classToken] = {color.r, color.g, color.b, r = color.r, g = color.g, b = color.b}
+-- We do this because people edit the vars directly, and changing the default
+-- globals makes SPICE FLOW!
+local function customClassColors()
+	if(CUSTOM_CLASS_COLORS) then
+		local function updateColors()
+			for classToken, color in next, CUSTOM_CLASS_COLORS do
+				colors.class[classToken] = {color.r, color.g, color.b}
+			end
+
+			for _, obj in next, oUF.objects do
+				obj:UpdateAllElements('CUSTOM_CLASS_COLORS')
+			end
+		end
+
+		updateColors()
+		CUSTOM_CLASS_COLORS:RegisterCallback(updateColors)
+
+		return true
+	end
+end
+
+if(not customClassColors()) then
+	for classToken, color in next, RAID_CLASS_COLORS do
+		colors.class[classToken] = {color.r, color.g, color.b}
+	end
+
+	local eventHandler = CreateFrame('Frame')
+	eventHandler:RegisterEvent('ADDON_LOADED')
+	eventHandler:SetScript('OnEvent', function(self)
+		if(customClassColors()) then
+			self:UnregisterEvent('ADDON_LOADED')
+			self:SetScript('OnEvent', nil)
+		end
+	end)
 end
 
 for debuffType, color in next, DebuffTypeColor do
-	colors.debuff[debuffType] = {color.r, color.g, color.b, r = color.r, g = color.g, b = color.b}
+	colors.debuff[debuffType] = {color.r, color.g, color.b}
 end
 
 for eclass, color in next, FACTION_BAR_COLORS do
-	colors.reaction[eclass] = {color.r, color.g, color.b, r = color.r, g = color.g, b = color.b}
+	colors.reaction[eclass] = {color.r, color.g, color.b}
 end
 
 for power, color in next, PowerBarColor do
@@ -48,10 +76,10 @@ for power, color in next, PowerBarColor do
 			colors.power[power] = {}
 
 			for index, color in next, color do
-				colors.power[power][index] = {color.r, color.g, color.b, r = color.r, g = color.g, b = color.b}
+				colors.power[power][index] = {color.r, color.g, color.b}
 			end
 		else
-			colors.power[power] = {color.r, color.g, color.b, atlas = color.atlas, r = color.r, g = color.g, b = color.b}
+			colors.power[power] = {color.r, color.g, color.b, atlas = color.atlas}
 		end
 	end
 end

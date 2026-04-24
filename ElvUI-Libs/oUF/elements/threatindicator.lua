@@ -36,7 +36,7 @@ local UnitExists = UnitExists
 local UnitThreatSituation = UnitThreatSituation
 
 local function Update(self, event, unit)
-	if(self.unit ~= unit) then return end
+	if(not unit or self.unit ~= unit) then return end
 
 	local element = self.ThreatIndicator
 	--[[ Callback: ThreatIndicator:PreUpdate(unit)

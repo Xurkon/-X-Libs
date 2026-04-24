@@ -88,6 +88,7 @@ local oUF = ns.oUF
 local unpack = unpack
 
 local GetPetHappiness = GetPetHappiness
+local UnitClass = UnitClass
 local UnitIsConnected = UnitIsConnected
 local UnitIsPlayer = UnitIsPlayer
 local UnitIsTapped = UnitIsTapped
@@ -125,12 +126,8 @@ local function UpdateColor(self, event, unit)
 	elseif(element.colorClass and UnitIsPlayer(unit)) or
 		(element.colorClassNPC and not UnitIsPlayer(unit)) or
 		(element.colorClassPet and UnitPlayerControlled(unit) and not UnitIsPlayer(unit)) then
-		if UnitIsUnit("player", unit) then
-			t = oUF.herocolor
-		else
-			local _, class = UnitClass(unit)
-			t = self.colors.class[class]
-		end
+		local _, class = UnitClass(unit)
+		t = self.colors.class[class]
 	elseif(element.colorReaction and UnitReaction(unit, 'player')) then
 		t = self.colors.reaction[UnitReaction(unit, 'player')]
 	elseif(element.colorSmooth) then

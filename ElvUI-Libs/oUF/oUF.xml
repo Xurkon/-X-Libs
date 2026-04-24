@@ -11,8 +11,6 @@
 
 	<Script file="elements\additionalpower.lua"/>
 	<Script file="elements\power.lua"/>
-	<Script file="elements\powerenergy.lua"/>
-	<Script file="elements\powerrage.lua"/>
 	<Script file="elements\auras.lua"/>
 	<Script file="elements\health.lua"/>
 	<Script file="elements\raidtargetindicator.lua"/>
@@ -33,7 +31,6 @@
 	<Script file="elements\combopoints.lua"/>
 	<Script file="elements\raidroleindicator.lua"/>
 	<Script file="elements\happinessindicator.lua"/>
-	<Script file="elements\classpower.lua"/>
 
 	<!-- Clique support -->
 	<Button name="oUF_ClickCastUnitTemplate" virtual="true" inherits="SecureUnitButtonTemplate, SecureHandlerEnterLeaveTemplate">

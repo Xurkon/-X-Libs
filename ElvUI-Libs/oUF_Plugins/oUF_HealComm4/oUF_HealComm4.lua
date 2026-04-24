@@ -54,25 +54,10 @@ local tremove = table.remove
 
 local GetTime = GetTime
 local UnitGUID = UnitGUID
-local UnitName = UnitName
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
-local UnitGetIncomingHeals = UnitGetIncomingHeals
 
--- Fallback sequence for HealComm
-local HealComm
-local HealComm112
-
-if not UnitGetIncomingHeals then
-	if LibStub then
-		HealComm = LibStub("LibHealComm-4.0", true)
-	end
-	
-	if not HealComm then
-		-- Fallback to Vanilla 1.12 HealComm
-		HealComm112 = _G.HealComm or (typeof and typeof(AceLibrary) == "table" and AceLibrary:HasInstance("HealComm-1.0") and AceLibrary("HealComm-1.0"))
-	end
-end
+local HealComm = LibStub("LibHealComm-4.0")
 
 local enabledUF, enabled = {}
 
@@ -90,30 +75,10 @@ local function Update(self)
 		element:PreUpdate(unit)
 	end
 
-	local myIncomingHeal, allIncomingHeal = 0, 0
-
-	if UnitGetIncomingHeals then
-		myIncomingHeal = UnitGetIncomingHeals(unit, UnitName("player")) or 0
-		allIncomingHeal = UnitGetIncomingHeals(unit) or 0
-	elseif HealComm and UnitGUID then
-		local guid = UnitGUID(unit)
-		local timeFrame = self.HealCommTimeframe and GetTime() + self.HealCommTimeframe or nil
-		myIncomingHeal = HealComm:GetHealAmount(guid, HealComm.ALL_HEALS, timeFrame, UnitGUID("player")) or 0
-		allIncomingHeal = HealComm:GetHealAmount(guid, HealComm.ALL_HEALS, timeFrame) or 0
-	elseif HealComm112 then
-		-- Vanilla 1.12 fallback
-		local name = UnitName(unit)
-		if name and HealComm112.getHeal then
-			allIncomingHeal = HealComm112:getHeal(name) or 0
-			-- HealComm 1.12 doesn't always distinguish 'my' heals easily, default to showing them all as 'other' or split based on API availability.
-			-- If the addon supports getting player heals, it would be here.
-			if HealComm112.getHealAmount then
-				-- Some variants have this
-				myIncomingHeal = HealComm112:getHealAmount(name, HealComm112.ALL_HEALS, nil, UnitName("player")) or 0
-			end
-		end
-	end
-
+	local guid = UnitGUID(unit)
+	local timeFrame = self.HealCommTimeframe and GetTime() + self.HealCommTimeframe or nil
+	local myIncomingHeal = HealComm:GetHealAmount(guid, HealComm.ALL_HEALS, timeFrame, UnitGUID("player")) or 0
+	local allIncomingHeal = HealComm:GetHealAmount(guid, HealComm.ALL_HEALS, timeFrame) or 0
 	local health = UnitHealth(unit)
 	local maxHealth = UnitHealthMax(unit)
 	local maxOverflowHP = maxHealth * element.maxOverflow
@@ -174,12 +139,8 @@ local function MultiUpdate(...)
 		for j = 1, #enabledUF do
 			local frame = enabledUF[j]
 
-			if frame.unit and frame:IsVisible() then
-				if UnitGUID and UnitGUID(frame.unit) == select(i, ...) then
-					Path(frame)
-				elseif not UnitGUID and UnitName(frame.unit) == select(i, ...) then
-					Path(frame)
-				end
+			if frame.unit and frame:IsVisible() and UnitGUID(frame.unit) == select(i, ...) then
+				Path(frame)
 			end
 		end
 	end
@@ -193,47 +154,25 @@ local function HealComm_Modified(event, guid)
 	MultiUpdate(guid)
 end
 
-local function HealComm112_Update(event, targetName)
-	MultiUpdate(targetName)
-end
-
 local function ToggleCallbacks(toggle)
-	if HealComm then
-		if toggle and not enabled and #enabledUF > 0 then
-			HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealStarted", HealComm_Heal_Update)
-			HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealUpdated", HealComm_Heal_Update)
-			HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealDelayed", HealComm_Heal_Update)
-			HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealStopped", HealComm_Heal_Update)
-			HealComm.RegisterCallback("oUF_HealComm", "HealComm_ModifierChanged", HealComm_Modified)
-			HealComm.RegisterCallback("oUF_HealComm", "HealComm_GUIDDisappeared", HealComm_Modified)
+	if toggle and not enabled and #enabledUF > 0 then
+		HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealStarted", HealComm_Heal_Update)
+		HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealUpdated", HealComm_Heal_Update)
+		HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealDelayed", HealComm_Heal_Update)
+		HealComm.RegisterCallback("oUF_HealComm", "HealComm_HealStopped", HealComm_Heal_Update)
+		HealComm.RegisterCallback("oUF_HealComm", "HealComm_ModifierChanged", HealComm_Modified)
+		HealComm.RegisterCallback("oUF_HealComm", "HealComm_GUIDDisappeared", HealComm_Modified)
 
-			enabled = true
-		elseif not toggle and enabled and #enabledUF == 0 then
-			HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealStarted")
-			HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealUpdated")
-			HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealDelayed")
-			HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealStopped")
-			HealComm.UnregisterCallback("oUF_HealComm", "HealComm_ModifierChanged")
-			HealComm.UnregisterCallback("oUF_HealComm", "HealComm_GUIDDisappeared")
+		enabled = true
+	elseif not toggle and enabled and #enabledUF == 0 then
+		HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealStarted")
+		HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealUpdated")
+		HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealDelayed")
+		HealComm.UnregisterCallback("oUF_HealComm", "HealComm_HealStopped")
+		HealComm.UnregisterCallback("oUF_HealComm", "HealComm_ModifierChanged")
+		HealComm.UnregisterCallback("oUF_HealComm", "HealComm_GUIDDisappeared")
 
-			enabled = nil
-		end
-	elseif HealComm112 then
-		-- Vanilla 1.12 HealComm event registrations
-		if toggle and not enabled and #enabledUF > 0 then
-			-- In 1.12 HealComm usually triggers events directly or via AceEvent
-			if typeof and typeof(AceLibrary) == "table" and AceLibrary:HasInstance("AceEvent-2.0") then
-				local AceEvent = AceLibrary("AceEvent-2.0")
-				AceEvent:RegisterEvent("HealComm_Healupdate", HealComm112_Update)
-			end
-			enabled = true
-		elseif not toggle and enabled and #enabledUF == 0 then
-			if typeof and typeof(AceLibrary) == "table" and AceLibrary:HasInstance("AceEvent-2.0") then
-				local AceEvent = AceLibrary("AceEvent-2.0")
-				AceEvent:UnregisterEvent("HealComm_Healupdate")
-			end
-			enabled = nil
-		end
+		enabled = nil
 	end
 end
 
@@ -246,10 +185,6 @@ local function Enable(self)
 
 		self:RegisterEvent("UNIT_HEALTH", Path)
 		self:RegisterEvent("UNIT_MAXHEALTH", Path)
-
-		if UnitGetIncomingHeals then
-			self:RegisterEvent("UNIT_HEAL_PREDICTION", Path)
-		end
 
 		if not element.maxOverflow then
 			element.maxOverflow = 1.05
@@ -264,10 +199,7 @@ local function Enable(self)
 		end
 
 		enabledUF[#enabledUF + 1] = self
-		
-		if not UnitGetIncomingHeals then
-			ToggleCallbacks(true)
-		end
+		ToggleCallbacks(true)
 
 		return true
 	end
@@ -288,10 +220,6 @@ local function Disable(self)
 		self:UnregisterEvent("UNIT_HEALTH", Path)
 		self:UnregisterEvent("UNIT_MAXHEALTH", Path)
 
-		if UnitGetIncomingHeals then
-			self:UnregisterEvent("UNIT_HEAL_PREDICTION", Path)
-		end
-
 		for i = 1, #enabledUF do
 			if enabledUF[i] == self then
 				tremove(enabledUF, i)
@@ -299,9 +227,7 @@ local function Disable(self)
 			end
 		end
 
-		if not UnitGetIncomingHeals then
-			ToggleCallbacks(false)
-		end
+		ToggleCallbacks(false)
 	end
 end
 
