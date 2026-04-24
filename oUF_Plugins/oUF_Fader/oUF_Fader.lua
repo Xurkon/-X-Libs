@@ -28,7 +28,7 @@ local UnitPowerType = UnitPowerType
 local E -- ElvUI engine defined in ClearTimers
 local MIN_ALPHA, MAX_ALPHA = .35, 1
 local onRangeObjects, onRangeFrame = {}
-local PowerTypesFull = {MANA = true, ENERGY = true}
+local PowerTypesFull = {MANA = true, FOCUS = true, ENERGY = true}
 
 local function ClearTimers(element)
 	if not E then E = _G.ElvUI[1] end
@@ -129,6 +129,7 @@ local function HoverScript(self)
 end
 
 local function TargetScript(self)
+	if self.isNamePlate and C_NamePlateManager.IsNamePlateMoving(self) then return end
 	if self.Fader and self.Fader.TargetHooked == 1 then
 		if self:IsShown() then
 			self.Fader:ForceUpdate()
@@ -228,13 +229,10 @@ local options = {
 	},
 	Power = {
 		enable = function(self)
-			self:RegisterEvent('UNIT_MANA', Update)
-			self:RegisterEvent('UNIT_MAXMANA', Update)
-			self:RegisterEvent('UNIT_ENERGY', Update)
-			self:RegisterEvent('UNIT_MAXENERGY', Update)
-
+			self:RegisterEvent('UNIT_POWER_UPDATE', Update)
+			self:RegisterEvent('UNIT_MAXPOWER', Update)
 		end,
-		events = {'UNIT_MANA','UNIT_MAXMANA','UNIT_ENERGY','UNIT_MAXENERGY'}
+		events = {'UNIT_POWER_UPDATE','UNIT_MAXPOWER'}
 	},
 	Vehicle = {
 		enable = function(self)

@@ -2,11 +2,15 @@
 -- @class file
 -- @name AceLocale-3.0
 -- @release $Id$
-local MAJOR,MINOR = "AceLocale-3.0-ElvUI", 6
+local MAJOR,MINOR = "AceLocale-3.0", 90000
 
 local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not AceLocale then return end -- no upgrade needed
+
+-- Dual registration for ElvUI compatibility
+LibStub.libs["AceLocale-3.0-ElvUI"] = AceLocale
+LibStub.minors["AceLocale-3.0-ElvUI"] = MINOR
 
 -- Lua APIs
 local assert, tostring, error = assert, tostring, error
@@ -93,28 +97,24 @@ local writedefaultproxy = setmetatable({}, {
 function AceLocale:NewLocale(application, locale, isDefault, silent)
 	local app = AceLocale.apps[application]
 
-	if silent and app and getmetatable(app) ~= readmetasilent then
-		geterrorhandler()("Usage: NewLocale(application, locale[, isDefault[, silent]]): 'silent' must be specified for the first locale registered")
-	end
 
 	if not app then
-		if silent=="raw" then
-			app = {}
-		else
-			app = setmetatable({}, silent and readmetasilent or readmeta)
-		end
+		app = {}
 		AceLocale.apps[application] = app
-		AceLocale.appnames[app] = application
 	end
 
-	-- ElvUI block
-	if (not app[locale]) or (app[locale] and type(app[locale]) ~= 'table') then
-		--	app[locale] = setmetatable({}, silent and readmetasilent or readmeta) -- To find missing keys
-		app[locale] = setmetatable({}, readmetasilent)
+	local locTable = rawget(app, locale)
+	if type(locTable) ~= 'table' then
+		if silent=="raw" then
+			locTable = {}
+		else
+			locTable = setmetatable({}, silent and readmetasilent or readmeta)
+		end
+		app[locale] = locTable
+		AceLocale.appnames[locTable] = application
 	end
 
-	registering = app[locale] -- remember globally for writeproxy and writedefaultproxy
-	-- end block
+	registering = locTable -- remember globally for writeproxy and writedefaultproxy
 
 	if isDefault then
 		return writedefaultproxy

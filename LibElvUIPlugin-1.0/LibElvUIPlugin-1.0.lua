@@ -202,6 +202,7 @@ function lib:OptionsUILoaded(_, addon)
 
 		for _, plugin in pairs(lib.plugins) do
 			if plugin.callback then
+				if not E.Options.args.plugins then lib:GetPluginOptions() end
 				plugin.callback()
 			end
 		end
@@ -221,24 +222,34 @@ function lib:GenerateVersionCheckMessage()
 end
 
 function lib:GetPluginOptions()
-	E.Options.args.plugins = {
-		order = -10,
-		type = "group",
-		name = HDR_CONFIG,
-		guiInline = false,
-		args = {
-			pluginheader = {
-				order = 1,
-				type = "header",
-				name = format(HDR_INFORMATION, MINOR)
-			},
-			plugins = {
-				order = 2,
-				type = "description",
-				name = lib:GeneratePluginList()
+	if not E.Options.args then E.Options.args = {} end
+	if not E.Options.args.plugins then
+		E.Options.args.plugins = {
+			order = -10,
+			type = "group",
+			name = HDR_CONFIG,
+			guiInline = false,
+			args = {
+				pluginheader = {
+					order = 1,
+					type = "header",
+					name = format(HDR_INFORMATION, MINOR)
+				},
+				plugins = {
+					order = 2,
+					type = "description",
+					name = lib:GeneratePluginList()
+				}
 			}
 		}
-	}
+	else
+		if not E.Options.args.plugins.args then E.Options.args.plugins.args = {} end
+		E.Options.args.plugins.args.plugins = {
+			order = 2,
+			type = "description",
+			name = lib:GeneratePluginList()
+		}
+	end
 end
 
 do	-- this will handle `8.1.5.0015` into `8.150015` etc
@@ -282,13 +293,20 @@ function lib:VersionCheck(event, prefix, message, _, sender)
 	end
 end
 
+local function RGBToHex(r, g, b)
+	r = r <= 1 and r >= 0 and r or 1
+	g = g <= 1 and g >= 0 and g or 1
+	b = b <= 1 and b >= 0 and b or 1
+	return format("|cff%02x%02x%02x", r*255, g*255, b*255)
+end
+
 function lib:GeneratePluginList()
 	local list = ""
 	for _, plugin in pairs(lib.plugins) do
 		if plugin.name ~= MAJOR then
 			local author = GetAddOnMetadata(plugin.name, "Author")
 			local title = GetAddOnMetadata(plugin.name, "Title") or plugin.name
-			local color = (plugin.old and E:RGBToHex(1, 0, 0)) or E:RGBToHex(0, 1, 0)
+			local color = (plugin.old and RGBToHex(1, 0, 0)) or RGBToHex(0, 1, 0)
 			list = list .. title
 			if author then list = list .. " " .. INFO_BY .. " " .. author end
 			list = list .. color .. (plugin.isLib and " " .. LIBRARY or " - " .. INFO_VERSION .. " " .. plugin.version)

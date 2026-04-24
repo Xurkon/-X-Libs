@@ -139,6 +139,10 @@ elseif locale == "zhCN" then
     SML_MT_font["伤害数字"] = [[Fonts\ARKai_C.ttf]]
     SML_MT_font["默认"]     = [[Fonts\ARKai_T.ttf]]
     SML_MT_font["聊天"]     = [[Fonts\ARHei.ttf]]
+    -- 3.3.5a Legacy Aliases
+    SML_MT_font["傷害數字"] = [[Fonts\ZYKai_C.ttf]]
+    SML_MT_font["預設"]     = [[Fonts\ZYKai_T.ttf]]
+    SML_MT_font["聊天"]     = [[Fonts\ZYHei.ttf]]
 --
     lib.DefaultMedia["font"] = "默认" -- someone from zhCN please adjust if needed
 --
@@ -167,7 +171,7 @@ elseif locale == "ruRU" then
     SML_MT_font["Nimrod MT"]                        = [[Fonts\NIM_____.ttf]]
     SML_MT_font["Skurri"]                           = [[Fonts\SKURRI_CYR.TTF]]
 --
-    lib.DefaultMedia.font = "Friz Quadrata TT"
+    lib.DefaultMedia.font = "Arial Narrow"
 --
 else
     LOCALE_MASK = lib.LOCALE_BIT_western
@@ -199,7 +203,7 @@ lib.DefaultMedia.statusbar = "Blizzard"
 
 -- SOUND
 if not lib.MediaTable.sound then lib.MediaTable.sound = {} end
-lib.MediaTable.sound["None"] = 1 -- Relies on the fact that PlaySoundFile doesn't error on this value
+lib.MediaTable.sound["None"] = [[Interface\Quiet.mp3]] -- Relies on the fact that PlaySoundFile doesn't error on this value
 lib.DefaultMedia.sound = "None"
 
 local function buildMediaList(mediatype)
@@ -254,8 +258,8 @@ function lib:Register(mediatype, key, data, langmask)
             -- files accessed via path only allowed from interface folder
             return false
         end
-        if mediatype == lib.MediaType.SOUND and not (path:find(".ogg", nil, true) or path:find(".mp3", nil, true)) then
-            -- only ogg and mp3 are valid sounds
+        if mediatype == lib.MediaType.SOUND and not (path:find(".ogg", nil, true) or path:find(".mp3", nil, true) or path:find(".wav", nil, true)) then
+            -- only ogg, mp3 and wav are valid sounds
             return false
         end
     end

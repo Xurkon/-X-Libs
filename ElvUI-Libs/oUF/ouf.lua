@@ -799,7 +799,8 @@ if(global) then
 	if(parent ~= 'oUF' and global == 'oUF') then
 		error('%s is doing it wrong and setting its global to "oUF".', parent)
 	elseif(_G[global]) then
-		error('%s is setting its global to an existing name "%s".', parent, global)
+		-- Skip registration if global already exists
+		-- error('%s is setting its global to an existing name "%s".', parent, global)
 	else
 		_G[global] = oUF
 	end
