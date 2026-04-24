@@ -8,7 +8,6 @@ local wipe = table.wipe
 
 local GetSpellInfo = GetSpellInfo
 local GetTime = GetTime
-local IsSpellKnown = IsSpellKnown
 local UnitAura = UnitAura
 
 local addon = {}
@@ -22,7 +21,6 @@ local debuff_data = {}
 addon.DebuffData = debuff_data
 
 addon.ShowDispellableDebuff = true
-addon.FilterDispellableDebuff = true
 addon.MatchBySpellName = false
 
 addon.priority = 10
@@ -42,10 +40,9 @@ end
 
 function addon:RegisterDebuffs(t)
 	for spell, value in pairs(t) do
-		if type(t[spell]) == "boolean" then
-			local oldValue = t[spell]
+		if type(value) == "boolean" then
 			t[spell] = {
-				["enable"] = oldValue,
+				["enable"] = value,
 				["priority"] = 0,
 				["stackThreshold"] = 0
 			}
@@ -61,8 +58,6 @@ function addon:ResetDebuffData()
 	wipe(debuff_data)
 end
 
-local playerClass = select(2, UnitClass("player"))
-
 local DispellColor = {
 	["Magic"] = {.2, .6, 1},
 	["Curse"] = {.6, 0, 1},
@@ -76,53 +71,6 @@ local DispellPriority = {
 	["Disease"] = 2,
 	["Poison"] = 1
 }
-
-local DispellFilter
-do
-	local dispellClasses = {
-		["PRIEST"] = {
-			["Magic"] = true,
-			["Disease"] = true
-		},
-		["SHAMAN"] = {
-			["Poison"] = true,
-			["Disease"] = true,
-			["Curse"] = false
-		},
-		["PALADIN"] = {
-			["Poison"] = true,
-			["Magic"] = true,
-			["Disease"] = true
-		},
-		["MAGE"] = {
-			["Curse"] = true
-		},
-		["DRUID"] = {
-			["Curse"] = true,
-			["Poison"] = true
-		}
-	}
-
-	DispellFilter = dispellClasses[playerClass] or {}
-end
-
-local specChecked
-local function CheckSpec(self, event, levels)
-	if event == "CHARACTER_POINTS_CHANGED" and levels > 0 then return end
-
-	if not event then
-		if specChecked then return end
-		specChecked = true
-	else
-		specChecked = nil
-	end
-
-	if IsSpellKnown(51886) then
-		DispellFilter.Curse = true
-	else
-		DispellFilter.Curse = false
-	end
-end
 
 local function formatTime(s)
 	if s < 10 then
@@ -230,7 +178,7 @@ local function Update(self, event, unit)
 		_stackThreshold = 0
 	else
 		local _, name, icon, count, debuffType, duration, expirationTime, spellId
-		local _priority, priority = 0
+		local _priority, priority = 0, 0
 
 		for i = 1, 40 do
 			name, _, icon, count, debuffType, duration, expirationTime, _, _, _, spellId = UnitAura(unit, i, "HARMFUL")
@@ -238,16 +186,7 @@ local function Update(self, event, unit)
 
 			--we couldn't dispell if the unit its charmed, or its not friendly
 			if addon.ShowDispellableDebuff and (element.showDispellableDebuff ~= false) and debuffType then
-				if addon.FilterDispellableDebuff then
-					DispellPriority[debuffType] = (DispellPriority[debuffType] or 0) + addon.priority --Make Dispell buffs on top of Boss Debuffs
-					priority = DispellFilter[debuffType] and DispellPriority[debuffType] or 0
-
-					if priority == 0 then
-						debuffType = nil
-					end
-				else
-					priority = DispellPriority[debuffType] or 0
-				end
+				priority = DispellPriority[debuffType] or 0
 
 				if priority > _priority then
 					_priority, _name, _icon, _count, _dtype, _duration, _endTime, _spellId = priority, name, icon, count, debuffType, duration, expirationTime, spellId
@@ -291,12 +230,6 @@ local function Enable(self)
 	if self.RaidDebuffs then
 		self:RegisterEvent("UNIT_AURA", Update)
 
-		if playerClass == "SHAMAN" then
-			self:RegisterEvent("PLAYER_TALENT_UPDATE", CheckSpec)
-			self:RegisterEvent("CHARACTER_POINTS_CHANGED", CheckSpec)
-			CheckSpec()
-		end
-
 		return true
 	end
 end
@@ -304,11 +237,6 @@ end
 local function Disable(self)
 	if self.RaidDebuffs then
 		self:UnregisterEvent("UNIT_AURA", Update)
-
-		if playerClass == "SHAMAN" then
-			self:UnregisterEvent("PLAYER_TALENT_UPDATE", CheckSpec)
-			self:UnregisterEvent("CHARACTER_POINTS_CHANGED", CheckSpec)
-		end
 
 		self.RaidDebuffs:Hide()
 	end

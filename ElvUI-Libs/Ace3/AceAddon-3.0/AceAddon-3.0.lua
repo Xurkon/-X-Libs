@@ -238,10 +238,14 @@ end
 -- -- Get the Module
 -- MyModule = MyAddon:GetModule("MyModule")
 function GetModule(self, name, silent)
-	if not self.modules[name] and not silent then
+	local module = self.modules[name]
+	if not module and self.parentAddon then
+		module = self.parentAddon.modules[name]
+	end
+	if not module and not silent then
 		error(("Usage: GetModule(name, silent): 'name' - Cannot find module '%s'."):format(tostring(name)), 2)
 	end
-	return self.modules[name]
+	return module
 end
 
 local function IsModuleTrue(self) return true end
@@ -275,6 +279,7 @@ function NewModule(self, name, prototype, ...)
 	module.IsModule = IsModuleTrue
 	module:SetEnabledState(self.defaultModuleState)
 	module.moduleName = name
+	module.parentAddon = self
 
 	if type(prototype) == "string" then
 		AceAddon:EmbedLibraries(module, prototype, ...)

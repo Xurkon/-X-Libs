@@ -103,6 +103,7 @@ local function resetAttributes(self)
 	self.channeling = nil
 	self.notInterruptible = nil
 	self.spellName = nil -- ElvUI
+	self.spellID = nil
 end
 
 -- ElvUI block
@@ -116,10 +117,10 @@ local function CastStart(self, event, unit)
 	if(self.unit ~= unit) then return end
 
 	local element = self.Castbar
-	local name, _, _, texture, startTime, endTime, isTradeSkill, castID, notInterruptible = UnitCastingInfo(unit)
+	local name, _, _, texture, startTime, endTime, isTradeSkill, castID, notInterruptible, spellID = UnitCastingInfo(unit)
 	event = 'UNIT_SPELLCAST_START'
 	if(not name) then
-		name, _, _, texture, startTime, endTime, isTradeSkill, notInterruptible = UnitChannelInfo(unit)
+		name, _, _, texture, startTime, endTime, isTradeSkill, notInterruptible, spellID = UnitChannelInfo(unit)
 		event = 'UNIT_SPELLCAST_CHANNEL_START'
 	end
 
@@ -141,6 +142,7 @@ local function CastStart(self, event, unit)
 	element.notInterruptible = notInterruptible
 	element.holdTime = 0
 	element.castID = castID
+	element.spellID = spellID
 	element.spellName = name -- ElvUI
 
 	if(element.casting) then
@@ -469,15 +471,15 @@ local function Disable(self)
 		element:Hide()
 
 		self:UnregisterEvent('UNIT_SPELLCAST_START', CastStart)
-		self:UnregisterEvent('UNIT_SPELLCAST_CHANNEL_START', CastStart)
-		self:UnregisterEvent('UNIT_SPELLCAST_DELAYED', CastUpdate)
-		self:UnregisterEvent('UNIT_SPELLCAST_CHANNEL_UPDATE', CastUpdate)
-		self:UnregisterEvent('UNIT_SPELLCAST_STOP', CastStop)
-		self:UnregisterEvent('UNIT_SPELLCAST_CHANNEL_STOP', CastStop)
-		self:UnregisterEvent('UNIT_SPELLCAST_FAILED', CastFail)
-		self:UnregisterEvent('UNIT_SPELLCAST_INTERRUPTED', CastFail)
-		self:UnregisterEvent('UNIT_SPELLCAST_INTERRUPTIBLE', CastInterruptible)
-		self:UnregisterEvent('UNIT_SPELLCAST_NOT_INTERRUPTIBLE', CastInterruptible)
+			self:UnregisterEvent('UNIT_SPELLCAST_CHANNEL_START', CastStart)
+			self:UnregisterEvent('UNIT_SPELLCAST_DELAYED', CastUpdate)
+			self:UnregisterEvent('UNIT_SPELLCAST_CHANNEL_UPDATE', CastUpdate)
+			self:UnregisterEvent('UNIT_SPELLCAST_STOP', CastStop)
+			self:UnregisterEvent('UNIT_SPELLCAST_CHANNEL_STOP', CastStop)
+			self:UnregisterEvent('UNIT_SPELLCAST_FAILED', CastFail)
+			self:UnregisterEvent('UNIT_SPELLCAST_INTERRUPTED', CastFail)
+			self:UnregisterEvent('UNIT_SPELLCAST_INTERRUPTIBLE', CastInterruptible)
+			self:UnregisterEvent('UNIT_SPELLCAST_NOT_INTERRUPTIBLE', CastInterruptible)
 
 		element:SetScript('OnUpdate', nil)
 

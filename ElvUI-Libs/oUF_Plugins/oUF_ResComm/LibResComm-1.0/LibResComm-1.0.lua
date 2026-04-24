@@ -110,8 +110,6 @@ end
 --
 
 local playerName = UnitName("player")
-local _, playerClass = UnitClass("player")
-local isResser = (playerClass == "PRIEST") or (playerClass == "SHAMAN") or (playerClass == "PALADIN") or (playerClass == "DRUID")
 
 -- Last target name from UNIT_SPELLCAST_SENT
 local sentTargetName = nil
@@ -129,17 +127,13 @@ local isCasting = nil
 -- Tracking resses
 local activeRes = {}
 
-local resSpell, combatResSpell -- avoid creating tables we're just going to discard immediately
-if playerClass == "DRUID" then
-	resSpell = GetSpellInfo(50769) -- Revive
-	combatResSpell = GetSpellInfo(20484) -- Rebirth
-elseif playerClass == "PALADIN" then
-	resSpell = GetSpellInfo(7328) -- Redemption
-elseif playerClass == "PRIEST" then
-	resSpell = GetSpellInfo(2006) -- Resurrection
-elseif playerClass == "SHAMAN" then
-	resSpell = GetSpellInfo(2008) -- Ancestral Spirit
-end
+local resSpells = {
+	[GetSpellInfo(50769)]=true, -- Revive
+	[GetSpellInfo(20484)]=true, -- Rebirth
+	[GetSpellInfo(7328)]=true, -- Redemption
+	[GetSpellInfo(2006)]=true, -- Resurrection
+	[GetSpellInfo(2008)]=true, -- Ancestral Spirit
+}
 
 ------------------------------------------------------------------------
 --	Utilities
@@ -161,7 +155,7 @@ end
 
 function lib.eventFrame:UNIT_SPELLCAST_START(unit, spellName)
 	if unit ~= "player" then return end
-	if spellName ~= resSpell and spellName ~= combatResSpell then return end
+	if not resSpells[spellName] then return end
 
 	isCasting = true
 
@@ -327,14 +321,12 @@ end
 function lib:start()
 	lib.eventFrame:RegisterEvent("CHAT_MSG_ADDON")
 
-	if isResser then
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SENT")
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
-		lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-	end
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SENT")
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
+	lib.eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 
 	lib.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
