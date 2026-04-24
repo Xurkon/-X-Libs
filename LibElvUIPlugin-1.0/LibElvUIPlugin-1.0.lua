@@ -106,7 +106,6 @@ end
 -- directly at load time, before ElvUI's Core has fully initialized.
 -- This shim ensures those tables exist so plugins don't get nil-indexing errors.
 do
-	print("|cff00d2ff[ElvUI LibElvUIPlugin-1.0] Shim block running, E = "..tostring(E))
 	local function ValueFuncCall(hex, ...)
 		if E.valueColorUpdateFuncs then
 			for func in pairs(E.valueColorUpdateFuncs) do
@@ -135,7 +134,6 @@ do
 			CENTER = "CENTER"
 		}
 		E.ValueFuncCall = E.ValueFuncCall or ValueFuncCall
-		print("|cff00d2ff[ElvUI LibElvUIPlugin-1.0] E.valueColorUpdateFuncs = "..tostring(E.valueColorUpdateFuncs))
 	end
 end
 
