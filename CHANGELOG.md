@@ -4,16 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **CallbackHandler-1.0.xml**: Added missing XML manifest. `Libs.xml` includes `CallbackHandler-1.0\CallbackHandler-1.0.xml` via `<Include>` but the file didn't exist — only the `.lua` was present. Without the manifest the `<Include>` silently loaded nothing, leaving `CallbackHandler-1.0` unregistered in LibStub. `AceEvent-3.0` then failed at load time: *"Cannot find a library instance of CallbackHandler-1.0"*.
+- **oUF_HealComm4 nil upvalue crash**: `UnitGetIncomingHeals` is Cata+ only. The code had it as an upvalue, the guard `if UnitGetIncomingHeals` correctly evaluated false on WotLK, but the deployed build had an older version that called the upvalue directly. Fixed by removing the upvalue entirely and using `_G.UnitGetIncomingHeals` at every call site for accurate runtime resolution.
+- **LibElvUIPlugin nil plugins crash**: Defensively initialized `plugins` table before first use to prevent nil-index crashes when plugins load before the ElvUI engine is fully initialized.
+- **LibElvUIPlugin debug prints**: Removed leftover `print()` statements left from development.
+- **AceAddon parent tracking + GetModule fallback**: Fixed `AceAddon-3.0` to properly track parent addons and fall back to parent modules when a child module is not found.
+
 ### Changed
-- **README overhaul**: Complete rewrite emphasizing !X-Libs as a universal library framework for all WoW versions (Retail, Wrath, TBC, Classic). Added version compatibility table, generic install path (`\<WoW>\Interface\AddOns\!X-Libs\`), library tables organized by category.
-- **Banner removed**: `.github/banner.svg` removed from repo — assets belong in a separate assets repo.
+- **oUF elements sync from master** (2927dae): Restored `oUF.herocolor` path in `power.lua`, `health.lua`, `additionalpower.lua`; fixed castbar event unregister handling; added nil guard in tags; added unit check in threat indicator.
+- **LibActionButton-1.0 spell charges**: Added `GetCharges` stubs, `SPELL_UPDATE_CHARGES` event handling, and charge cooldown support. Added `CUSTOM_CLASS_COLORS` support in `oUF/colors.lua`.
+- **ElvUI-Libs TOC restructure** (7d7363b): Updated `!X-Libs.toc` to use `LibStub/LibStub.lua` (ElvUI directory structure). Replaced remaining Ace3 XML files with ElvUI versions. Deleted nested `AceConsole-3.0` subfolder duplicates and root `LibStub.lua` (replaced by `LibStub/LibStub.lua`).
+- **Ace3 baseline replacement** (81c791a): Replaced Ace3 libs (`AceAddon-3.0`, `AceComm-3.0`, `AceLocale-3.0`, `AceTimer-3.0`, `CallbackHandler-1.0`, `LibStub`) with ElvUI versions as the working baseline post-v1.11. Removed nested AceComm subfolder and its embedded `ChatThrottleLib.lua` (replaced by root-level `ChatThrottleLib.lua`).
+
+### Added
+- **`.gitignore`**: Added from Questie-X pattern — ignores `.kilo/`, `.github/`, `node_modules/`, `*.py`, `*.ps1`, `*.log`, `*.zip`, `coords.lua`, `debug.lua`, `CLAUDE.md`, and other dev artifacts.
+- **`oUF/blizzard.lua`**: Added new file from LibElvUIPlugin defensive fix commit.
 
 ### Removed
 - **Dev/agent files**: `.kilo/` (agent worktree/session artifacts), `CLAUDE.md` (agent instructions), `fix_libs.py` (dev helper script), tracked `.kilo/package-lock.json`.
 - **Tracked `.github/`**: Removed from index, directory deleted locally.
+- **`nul` file**: Windows reserved device name file removed.
+- **Nested library duplicates**: Removed nested `AceComm-3.0/AceComm-3.0/` subfolder and `LibStub.lua` (both replaced by ElvUI-structured versions).
 
-### Added
-- **`.gitignore`**: Added from Questie-X pattern — ignores `.kilo/`, `.github/`, `node_modules/`, `*.py`, `*.ps1`, `*.log`, `*.zip`, `coords.lua`, `debug.lua`, `CLAUDE.md`, and other dev artifacts.
+### Documentation
+- **README overhaul**: Complete rewrite emphasizing !X-Libs as a universal library framework for all WoW versions (Retail, Wrath, TBC, Classic). Added version compatibility table, generic install path, library tables organized by category.
+- **Banner removed**: `.github/banner.svg` removed from repo.
 
 ## [1.11] - 2026-04-19
 ### Fixed
