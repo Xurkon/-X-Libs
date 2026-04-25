@@ -2,7 +2,7 @@
 
 **A universal shared-library framework for World of Warcraft addons — running every version from Classic to Dragonflight.**
 
-*One addon. 80+ battle-tested libraries. Zero vendor lock-in.*
+*One addon. All major libraries. Zero vendor lock-in.*
 
 ---
 
@@ -34,7 +34,7 @@ WoW Client (any version)
     ├── LibSharedMedia, Masque (Media & skins)
     ├── HereBeDragons + Astrolabe (Map coordinates)
     ├── Compat-335.lua + Compat-Lua.lua (Version shims)
-    └── …80+ total libraries
+    └── …and many more
         └── ElvUI_Enhanced (uses shared libs)
         └── Questie-X (uses shared libs)
         └── PE-ElvUI (uses shared libs)
@@ -43,27 +43,100 @@ WoW Client (any version)
 
 ---
 
-## 80+ curated libraries
+## Libraries
 
-**Core Framework** — AceAddon-3.0 · AceConsole-3.0 · AceDB-3.0 · AceDBOptions-3.0 · AceEvent-3.0 · AceHook-3.0 · AceTimer-3.0 · AceBucket-3.0 · AceSerializer-3.0 · AceComm-3.0 · AceTab-3.0 · AceConfig-3.0 · AceConfigDialog-3.0 · AceGUI-3.0 · AceGUI-3.0-SharedMediaWidgets
+### Core Framework
+| Library | Description |
+|---------|-------------|
+| AceAddon-3.0 | Addon framework with module support |
+| AceConsole-3.0 | Chat command handling |
+| AceDB-3.0 | Profile & SavedVariables management |
+| AceDBOptions-3.0 | Default options UI for profiles |
+| AceEvent-3.0 | Event handling & dispatching |
+| AceHook-3.0 | Secure hooking framework |
+| AceTimer-3.0 | Scheduled callback timers |
+| AceBucket-3.0 | Throttled event batching |
+| AceSerializer-3.0 | Table serialization |
+| AceComm-3.0 | Chat channel communication |
+| AceTab-3.0 | Tab-completion framework |
+| AceConfig-3.0 | Configuration system |
+| AceGUI-3.0 | GUI widget toolkit |
 
-**Unit Frames** — oUF · oUF_Plugins
+### Unit Frames
+| Library | Description |
+|---------|-------------|
+| oUF | Unified unit frame framework |
+| oUF_Plugins | Common plugins (auras, indicators, etc.) |
 
-**Library Infrastructure** — LibStub · CallbackHandler-1.0 · LibSerialize · LibCompress · LibDeflate · LibBase64-1.0
+### Library Infrastructure
+| Library | Description |
+|---------|-------------|
+| LibStub | Library registry & version negotiation |
+| CallbackHandler-1.0 | Event callback management |
 
-**UI Primitives** — LibQTip-1.0 · LibWindow-1.1 · LibSimpleSticky · LibCustomGlow-1.0 · LibAnim · Masque · ArkDewdrop · DewdropLib · UIDropDownFork · LibAboutPanel · LibBetterBlizzOptions-1.0 · LibDFramework-1.0
+### UI Primitives
+| Library | Description |
+|---------|-------------|
+| LibQTip-1.0 | Tooltip generation |
+| LibWindow-1.1 | Window persistence |
+| LibSimpleSticky | Frame dragging & snapping |
+| LibCustomGlow-1.0 | Custom glow effects |
+| Masque | Button skinning engine |
+| ArkDewdrop | Dropdown menu system |
+| UIDropDownFork | Dropdown menu fork |
 
-**Data & Broker** — LibDBIcon-1.0 · LibDataBroker-1.1 · LibSink-2.0 · LibItemSearch-1.2
+### Data & Broker
+| Library | Description |
+|---------|-------------|
+| LibSerialize | Table serialization |
+| LibCompress | Compression |
+| LibDeflate | Deflate compression |
+| LibBase64-1.0 | Base64 encoding |
+| LibDBIcon-1.0 | Minimap icon broker |
+| LibDataBroker-1.1 | Addon data broker |
+| LibSink-2.0 | Output routing |
+| LibItemSearch-1.2 | Item search & filtering |
 
-**Localization** — AceLocale-3.0 · LibBabble-3.0 (Boss · CreatureType · Faction · Inventory · SubZone · Zone) · LibTourist-3.0 · LibTranslit
+### Localization
+| Library | Description |
+|---------|-------------|
+| AceLocale-3.0 | Locale management |
+| LibBabble-3.0 | Boss, CreatureType, Faction, Inventory, SubZone, Zone |
+| LibTourist-3.0 | Zone & continent information |
 
-**Information** — LibSpellRange-1.0 · LibRangeCheck-2.0 · LibTaxi-1.0 · LibCandyBar-3.0 · LibGraph-2.0 · LibBossIDs-1.0 · LibGroupTalents-1.0 · LibCamera-1.0 · LibRover-1.0 · LibS2kMisc-1.0 · LibS2kFactionalItems-1.0 · LibHash-1.0 · LibTextTable-1.0 · LibTutorial-1.0 · LibCandyBar-3.0
+### Information
+| Library | Description |
+|---------|-------------|
+| LibSpellRange-1.0 | Spell range checking |
+| LibRangeCheck-2.0 | Distance-based range checking |
+| LibTaxi-1.0 | Taxi node information |
+| LibCandyBar-3.0 | Cooldown timer bars |
+| LibGraph-2.0 | Graphing |
+| LibBossIDs-1.0 | Boss ID registry |
+| LibGroupTalents-1.0 | Talent information |
 
-**World & Map** — HereBeDragons · Astrolabe · HBDragons.lua · Krowi_WorldMapButtons
+### World & Map
+| Library | Description |
+|---------|-------------|
+| HereBeDragons | World coordinate API |
+| Astrolabe | Map & minimap library |
+| Krowi_WorldMapButtons | Map button management |
 
-**Compatibility** — Compat-335.lua · Compat-Lua.lua · TaintLess · LibDispel · EasyFork.lua · LibCompat-1.0 · LibAuraInfo-1.0 · NickTag-1.0 · LibElvUIPlugin-1.0 · LibActionButton-1.0 · LibBetterBlizzOptions-1.0
+### Compatibility
+| Library | Description |
+|---------|-------------|
+| Compat-335.lua | Wrath 3.3.5a API shims |
+| Compat-Lua.lua | Lua version compatibility |
+| TaintLess | Taint prevention |
+| LibDispel | Dispel/buff type detection |
+| EasyFork.lua | API compatibility fork |
 
-**Media** — LibSharedMedia-3.0 · UTF8
+### Media
+| Library | Description |
+|---------|-------------|
+| LibSharedMedia-3.0 | Shared media (fonts, sounds, textures) |
+| LibTranslit | Character transcription |
+| UTF8 | UTF-8 string handling |
 
 *(full list in `Libs.xml`)*
 
@@ -77,20 +150,18 @@ WoW Client (any version)
 | Wrath of the Lich King 3.3.5a | 5.1 | ✓ Full |
 | The Burning Crusade Classic | 5.1 | ✓ Full |
 | Classic Era | 5.1 | ✓ Full |
-| Lua 5.0 (Classic era baseline) | 5.0 | ✓ Full |
+| Lua 5.0+ | 5.0 | ✓ Full |
 
-Every library probes for APIs at runtime and provides graceful fallbacks. The `Compat-335.lua` shim fills WoW 3.3.5a-specific gaps; `Compat-Lua.lua` handles Lua version differences. No hard API assumptions, no silent crashes on unsupported versions.
+Every library probes for APIs at runtime and provides graceful fallbacks. The `Compat-335.lua` shim fills WoW 3.3.5a-specific gaps; `Compat-Lua.lua` handles Lua version differences. No hard API assumptions, no silent crashes on older clients.
 
 ---
 
 ## Installation
 
-**Standalone (recommended)**
 1. Download `!X-Libs.zip` from → [Releases](https://github.com/Xurkon/-X-Libs/releases)
-2. Extract into `World of Warcraft/Interface/AddOns/!X-Libs/`
+2. Extract into `\<WoW>\Interface\AddOns\!X-Libs\`
 3. Load WoW — all supporting addons automatically detect and use it
 
-**Embedded fallback**
 Some addons bundle their own libs and refuse to load without them. Delete those embedded copies — if the addon uses Ace3 or LibStub, it will use !X-Libs transparently.
 
 ---
