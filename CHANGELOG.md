@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.12] - 2026-04-25
 
 ### Fixed
 - **CallbackHandler-1.0.xml**: Added missing XML manifest. `Libs.xml` includes `CallbackHandler-1.0\CallbackHandler-1.0.xml` via `<Include>` but the file didn't exist — only the `.lua` was present. Without the manifest the `<Include>` silently loaded nothing, leaving `CallbackHandler-1.0` unregistered in LibStub. `AceEvent-3.0` then failed at load time: *"Cannot find a library instance of CallbackHandler-1.0"*.

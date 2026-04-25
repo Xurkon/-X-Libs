@@ -2,7 +2,7 @@
 ## Title: 000-X-Libs
 ## Notes: Universal shared libraries for all addons - works on Vanilla, TBC, WotLK, Cata, MoP, and Retail
 ## Author: X-Plore
-## Version: 1.5
+## Version: 1.12
 ## X-oUF: ElvUF
 ## LoadOnDemand: 0
 
