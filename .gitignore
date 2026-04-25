@@ -25,6 +25,9 @@ release_notes.txt
 !LICENSE
 !Icons/MIT.txt
 
+# GitHub assets
+.github/
+
 # Dev files
 coords.lua
 debug.lua
