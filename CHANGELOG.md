@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **README overhaul**: Complete rewrite emphasizing !X-Libs as a universal library framework for all WoW versions (Retail, Wrath, TBC, Classic). Added version compatibility table, generic install path (`\<WoW>\Interface\AddOns\!X-Libs\`), library tables organized by category.
+- **Banner removed**: `.github/banner.svg` removed from repo — assets belong in a separate assets repo.
+
+### Removed
+- **Dev/agent files**: `.kilo/` (agent worktree/session artifacts), `CLAUDE.md` (agent instructions), `fix_libs.py` (dev helper script), tracked `.kilo/package-lock.json`.
+- **Tracked `.github/`**: Removed from index, directory deleted locally.
+
+### Added
+- **`.gitignore`**: Added from Questie-X pattern — ignores `.kilo/`, `.github/`, `node_modules/`, `*.py`, `*.ps1`, `*.log`, `*.zip`, `coords.lua`, `debug.lua`, `CLAUDE.md`, and other dev artifacts.
+
 ## [1.11] - 2026-04-19
 ### Fixed
 - **AceLocale GetLocale API**: Fixed `GetLocale(application, locale, silent)` signature — `locale` was being silently dropped because the function only accepted `(application, silent)`. Now properly returns the locale-specific table from `AceLocale.apps[application][locale]` instead of the entire app table.
