@@ -1,5 +1,7 @@
 # !X-Libs
 
+> ⚠️ **Alpha** — !X-Libs is actively developed and currently in alpha. Expect breaking changes between releases.
+
 **A universal shared-library framework for World of Warcraft addons — running every version from Vanilla to Retail.**
 
 *One addon. All major libraries. Zero vendor lock-in.*
