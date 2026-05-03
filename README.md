@@ -1,6 +1,6 @@
 # !X-Libs
 
-**A universal shared-library framework for World of Warcraft addons — running every version from Classic to Dragonflight.**
+**A universal shared-library framework for World of Warcraft addons — running every version from Vanilla to Retail.**
 
 *One addon. All major libraries. Zero vendor lock-in.*
 
@@ -142,25 +142,13 @@ WoW Client (any version)
 
 ---
 
-## Version compatibility
-
-| Client | Lua | Status |
-|--------|-----|--------|
-| Retail (Dragonflight / Warband) | 5.1+ | ✓ Full |
-| Wrath of the Lich King 3.3.5a | 5.1 | ✓ Full |
-| The Burning Crusade Classic | 5.1 | ✓ Full |
-| Classic Era | 5.1 | ✓ Full |
-| Lua 5.0+ | 5.0 | ✓ Full |
-
-Every library probes for APIs at runtime and provides graceful fallbacks. The `Compat-335.lua` shim fills WoW 3.3.5a-specific gaps; `Compat-Lua.lua` handles Lua version differences. No hard API assumptions, no silent crashes on older clients.
-
----
-
 ## Installation
 
 1. Download `!X-Libs.zip` from → [Releases](https://github.com/Xurkon/-X-Libs/releases)
 2. Extract into `\<WoW>\Interface\AddOns\!X-Libs\`
 3. Load WoW — all supporting addons automatically detect and use it
+
+Although !X-Libs is programmed to coexist with other library-providing addons, compatibility cannot be guaranteed when used alongside libraries from other addons. If you encounter issues, try removing conflicting embedded library copies.
 
 Some addons bundle their own libs and refuse to load without them. Delete those embedded copies — if the addon uses Ace3 or LibStub, it will use !X-Libs transparently.
 
