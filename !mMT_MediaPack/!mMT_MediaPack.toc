@@ -1,0 +1,14 @@
+## Name: !mMT_MediaPack
+## Interface: 110100, 11507, 30403, 40402, 120001, 120005
+## Author: Blinkii
+## Version: 1.40
+## Title: !mMT Media Pack
+## Notes: mMT Media Pack by Blinkii | Support: mMediaTag@gmx.de
+## IconTexture: Interface\AddOns\!mMT_MediaPack\media\logo\icon
+## SavedVariables: mMTSettings
+## DefaultState: Enabled
+## OptionalDeps: LibSharedMedia-3.0
+## X-Curse-Project-ID: 289502
+## X-Wago-ID: 9rN48AND
+
+media\core.lua

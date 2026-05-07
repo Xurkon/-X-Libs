@@ -29,6 +29,8 @@
 
 	<!-- Media libraries - MUST load BEFORE widgets that depend on LSM -->
 	<Include file="LibSharedMedia-3.0\lib.xml"/>
+	<!-- mMT Media Pack - registers 600+ textures, fonts, borders, sounds with LibSharedMedia -->
+	<Include file="!mMT_MediaPack\!mMT_MediaPack.toc"/>
 	<Include file="LibDataBroker-1.1\LibDataBroker-1.1.xml"/>
 	<Include file="LibDBIcon-1.0\lib.xml"/>
 
